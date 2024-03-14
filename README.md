@@ -1,6 +1,7 @@
 # Sounding Analyze
 
-Actually, C program but graphical output has been added with python3.
+Actually, a C program to analyze sounding data.
+By time graphical output like plots has been added using python3 and matplotlib.
 
 ## Installation
 
