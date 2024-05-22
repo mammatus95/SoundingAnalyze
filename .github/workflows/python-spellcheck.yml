@@ -5,9 +5,8 @@ name: Codecheck
 #F7: Assertion Errors
 #F82: 'local folder name is imported', indicating that importing a local module with the same name as a standard library module
 
-on:
-  push:
-    branches: [ "main" ]
+on: ["push", pull_request_target]
+
     
 jobs:
   build-linux:

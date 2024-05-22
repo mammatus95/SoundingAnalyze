@@ -1,23 +1,22 @@
 # ignore ALL .log files
 
-.ipynb_checkpoints/
-*/.ipynb_checkpoints/
-*/*/.ipynb_checkpoints/
 
-*/*.csv
-*/*/*.csv
+**.ipynb_checkpoints/
 
-*/*.png
-*/*/*.png
+**.txt
+**.csv
+**.html
 
-*/*.svg
-*/*/*.svg
+**.png
+**.svg
+**.jpg
 
-*/*.jpg
-*/*/*.jpg
+**.log
 
-*.log
-*/*.log
+.idea
 
-*.html
-*/*.html
+*.iml
+
+out/
+
+build/
