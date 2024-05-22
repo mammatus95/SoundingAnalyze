@@ -1,0 +1,31 @@
+<project name="Main" default="compile-and-run" basedir=".">
+
+    <!-- Properties -->
+    <property name="src.dir" value="src"/>
+    <property name="build.dir" value="build"/>
+    <property name="main.class" value="ReadData"/>
+
+    <!-- Create the build directory -->
+    <target name="init">
+        <mkdir dir="${build.dir}"/>
+    </target>
+
+    <!-- Compile the Java source files -->
+    <target name="compile" depends="init">
+        <javac srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false"/>
+    </target>
+
+    <!-- Run the Java program -->
+    <target name="run" depends="compile">
+        <java classname="${main.class}" classpath="${build.dir}"/>
+    </target>
+
+    <!-- Compile and run the Java program -->
+    <target name="compile-and-run" depends="run"/>
+
+    <!-- Clean up the build directory -->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+</project>
