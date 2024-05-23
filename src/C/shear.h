@@ -408,10 +408,10 @@ struct inflow *effective_inflow_layer (struct sounding_data drk[],int eqh,int an
 float streamwise (struct sounding_data all[], float high) {
 
     int i=0;
-    float H=0,h=0,st=0;
+    float H=0, h=0, st=0;
 
     while (all[i].agl < high){
-        h =  all[i].ushr * ((all[i].srvr + all[i+1].srvr)/ (float) 2) - all[i].vshr * ((all[i].srur +  all[i+1].srur)/ (float) 2);//+
+        h =  all[i].ushr * ((all[i].srvr + all[i+1].srvr)/ (float) 2) - all[i].vshr * ((all[i].srur +  all[i+1].srur)/ (float) 2);
         st = sqrt( SQR((all[i].srur +  all[i+1].srur)/ (float) 2) + SQR((all[i].srvr + all[i+1].srvr)/ (float) 2));
 //      printf("%.1f\n",h/st );
         if (st != 0)

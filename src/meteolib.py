@@ -94,6 +94,29 @@ def temp_at_mixrat(w, p):
     return x
 
 
+def lcltemp(t, td):
+    '''
+    Returns the temperature (C) of a parcel when raised to its LCL.
+    Parameters
+    ----------
+    t : number, numpy array
+        Temperature of the parcel (C)
+    td : number, numpy array
+        Dewpoint temperature of the parcel (C)
+    Returns
+    -------
+    Temperature (C) of the parcel at it's LCL.
+    '''
+    s = t - td
+    dlt = s * (1.2185 + 0.001278 * t + s * (-0.00219 + 1.173e-5 * s -
+        0.0000052 * t))
+    return t - dlt
+
+
+def lclhigh (t, td, high):
+    return high + ((t-td) * 125.0)
+
+
 def satdampfdruck (t):
     # wahrscheindlich der Saettigungsdampfdruck fur wasser also der maximale partialdruck den der wasserdampf erreichen kann
     pol = t * (1.1112018e-17 + (t * -3.0994571e-20))
@@ -159,25 +182,6 @@ def satlift(p, thetam):
     return t2 - eor
 
 
-def lcltemp(t, td):
-    '''
-    Returns the temperature (C) of a parcel when raised to its LCL.
-    Parameters
-    ----------
-    t : number, numpy array
-        Temperature of the parcel (C)
-    td : number, numpy array
-        Dewpoint temperature of the parcel (C)
-    Returns
-    -------
-    Temperature (C) of the parcel at it's LCL.
-    '''
-    s = t - td
-    dlt = s * (1.2185 + 0.001278 * t + s * (-0.00219 + 1.173e-5 * s -
-        0.0000052 * t))
-    return t - dlt
-
-
 def thalvl(theta, t):
     '''
     Returns the level (hPa) of a parcel.
@@ -196,7 +200,7 @@ def thalvl(theta, t):
     return 1000. / (np.power((theta / t), (1./cr['ROCP'])))
 
 
-def theta(p, t, p2=1000.):
+def theta(p, t, p0=1000.):
     '''
     Returns the potential temperature (C) of a parcel.
     Parameters
@@ -211,8 +215,32 @@ def theta(p, t, p2=1000.):
     -------
     Potential temperature (C)
     '''
-    return ((t + cr['ZEROCNK']) * np.power((p2 / p), cr['ROCP'])) - cr['ZEROCNK']
+    return ((t + cr['ZEROCNK']) * np.power((p0 / p), cr['ROCP'])) - cr['ZEROCNK']
 
+def potlvl(theta, temp, p0=1000.):
+    '''
+    Parameters
+    ----------
+    theta : Potential temperature of the parcel (K)
+    temp : Temperature of the parcel (C)
+
+    Returns
+    -------
+    Pressure Level (hPa [float]) of the parcel
+
+    Funktionsweise
+    --------------
+    Die Formel für die Potentielle Temperatur 
+    kann auch nach dem Druck aufgelöst werden:
+    Cp (ln T - ln To) = R (ln p - ln po) 
+    Cp/R ln(To/T) = po/p |To = Theata
+    p= po / (To/T)^Cp/R
+
+    Da bei trockenadiabatischer Erwärmung die Potentielle Temperatur erhalten ist, kann somit
+    Theta als gegeben vorrausgesetzt werden und somit der Druck des lcl berechnet werden.
+    '''
+    thalvl = p0 / (pow((theta / temp), (1/cr['ROCP'])))
+    return thalvl
 
 def thetas(theta, presvals):
     return ((theta + cr['ZEROCNK']) / (np.power((1000. / presvals), cr['ROCP']))) - cr['ZEROCNK']
@@ -270,7 +298,7 @@ def wetbulb(p, t, td):
     return wetlift(p2, t2, p)
 
 # Source: SHARPpy
-def thetae(p, t, q, p2=1000.):
+def thetae(p, t, q, p0=1000.):
     """
     Calculates the equlivalent potential temperature (K) for the given parcel
     Parameters
@@ -285,19 +313,42 @@ def thetae(p, t, q, p2=1000.):
     -------
     qulivalent potential temperature (K)
     """
-    return ((t + cr['ZEROCNK'])+((2.501*1000000)/1004)*q)* np.power((p2/p), cr['ROCP'])
+    return ((t + cr['ZEROCNK'])+((2.501*1000000)/1004)*q) * np.power((p0/p), cr['ROCP'])
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+def uvwind(winddir, wind_speed):
+    """
+    This function convert wind speed and direction in to u,v component.
+    The Winddirection is given in degree, 
+    """
+
+    u = (-1) * np.multiply(wind_speed, np.sin(np.radians(winddir)))
+    v = (-1) * np.multiply(wind_speed, np.cos(np.radians(winddir)))
+    return u, v
+
+def uv2spddir(u, v):
+
+    direction = np.rad2deg(np.arctan2(-u, v))
+
+    if isinstance(direction, np.ndarray):
+        direction = np.remainder(direction + 360, 360)
+    else:
+        direction = (direction + 360) % 360
+
+    return (np.deg2rad(direction), np.sqrt(u*u + v*v))
 
 
-def mean_wind(u, v, ps, stu=0, stv=0):
-    return np.average(u, weights=ps)-stu, np.average(v, weights=ps)-stv
+def mean_wind(u, v, ps, stu=0.0, stv=0.0):
+    return np.average(u, weights=ps) - stu, np.average(v, weights=ps) - stv
 
 
 def non_parcel_bunkers_motion_experimental(u, v, ps, i_500m, i_5km, i_6km):
-    d=7.5
-    ## sfc-500m Mean Wind
+    d = 7.5
+    # sfc-500m Mean Wind
     mnu500m, mnv500m = mean_wind(u[:i_500m], v[:i_500m], ps[:i_500m])
     
-    ## 5.5km-6.0km Mean Wind
+    # 5.5km-6.0km Mean Wind
     mnu5500m_6000m, mnv5500m_6000m = mean_wind(u[i_5km:i_6km], v[i_5km:i_6km], ps[i_5km:i_6km])
     
     # shear vector of the two mean winds
@@ -316,4 +367,7 @@ def non_parcel_bunkers_motion_experimental(u, v, ps, i_500m, i_5km, i_6km):
     
     return rstu, rstv, lstu, lstv, mnu6, mnv6
 
-# ---------------------------------------------------------------------------------------------------------------------
+def shear(ubot, vbot, utop, vtop):
+    du = utop - ubot
+    dv = vtop - vbot
+    return np.sqrt(du*du + dv*dv)

@@ -12,6 +12,10 @@ conda env create -f environment.yml
 
 conda activate SoundingAnalyze
 ```
+## How to run?
+```bash
+python3 main.py 2018-12-07 00 10393
+```
 
 ## Example
 

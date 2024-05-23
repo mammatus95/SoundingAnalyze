@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 import unittest
 import numpy as np
-import sys
-import urllib.request# project modul
-from src.readhtml_bufr import readhtml2numpy
+# project modul
+from readhtml_bufr import readhtml2numpy
 
 
-class TestMODELIFNO(unittest.TestCase):
+class Test_READHTML(unittest.TestCase):
     def setUp(self):
         self.urlstring = "http://weather.uwyo.edu/cgi-bin/bufrraob.py?src=bufr&datetime=2018-12-07%2000:00:00&id=10393&type=TEXT:LIST"
         self.expectedarraysize = 5198
@@ -22,6 +21,7 @@ class TestMODELIFNO(unittest.TestCase):
         self.assertIsInstance(self.wind_speed, np.ndarray)
 
     def test_pressure(self):
+        self.pres, _, _, _, _, _, _ = readhtml2numpy(self.urlstring)
         self.assertGreaterEqual(self.pres.size, self.expectedarraysize, "Pressure Array Size are to small")
         self.assertGreaterEqual(self.pres.max(), 1000, "Surface Pressure is to small")
 
