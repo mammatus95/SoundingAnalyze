@@ -12,6 +12,7 @@ def main():
 
     station_sounding_obj = sounding(urlstring)
     print(station_sounding_obj.get_meanwind())
+    print("Surface CAPE", station_sounding_obj.get_sb_cape())
     plot_stuve(station_sounding_obj, sys.argv[3])
 
 if __name__ == "__main__":

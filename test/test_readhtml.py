@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 # project modul
-from readhtml_bufr import readhtml2numpy
+from src.readhtml_bufr import readhtml2numpy
 
 
 class Test_READHTML(unittest.TestCase):

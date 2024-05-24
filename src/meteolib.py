@@ -187,63 +187,59 @@ def thalvl(theta, t):
     Returns the level (hPa) of a parcel.
     Parameters
     ----------
-    theta : number, numpy array
-        Potential temperature of the parcel (C)
-    t : number, numpy array
-        Temperature of the parcel (C)
+    theta : Potential temperature of the parcel in K as numpy.array
+    t : Temperature of the parcel in K as numpy.array
+
     Returns
     -------
-    Pressure Level (hPa [float]) of the parcel
+    Pressure level in hPa
     '''
-    t = t + cr['ZEROCNK']
-    theta = theta + cr['ZEROCNK']
+
     return 1000. / (np.power((theta / t), (1./cr['ROCP'])))
 
 
-def theta(p, t, p0=1000.):
+def theta(pres, temp, p0=1000.):
     '''
-    Returns the potential temperature (C) of a parcel.
     Parameters
     ----------
-    p : number, numpy array
-        The pressure of the parcel (hPa)
-    t : number, numpy array
-        Temperature of the parcel (C)
-    p2 : number, numpy array (default 1000.)
-        Reference pressure level (hPa)
+    pres : The pressure of the parcel in hPa as numpy.array
+    temp : Temperature of the parcel in K as numpy.array
+    p0   : Reference pressure level in hPa as float (default 1000.)
     Returns
     -------
-    Potential temperature (C)
+    Potential temperature in K
     '''
-    return ((t + cr['ZEROCNK']) * np.power((p0 / p), cr['ROCP'])) - cr['ZEROCNK']
+    return (temp * np.power((p0 / pres), cr['ROCP']))
+
 
 def potlvl(theta, temp, p0=1000.):
     '''
     Parameters
     ----------
-    theta : Potential temperature of the parcel (K)
-    temp : Temperature of the parcel (C)
+    theta : Potential temperature of the parcel in K as numpy.array
+    temp : Temperature of the parcel in K as numpy.array
 
     Returns
     -------
     Pressure Level (hPa [float]) of the parcel
 
-    Funktionsweise
-    --------------
-    Die Formel für die Potentielle Temperatur 
-    kann auch nach dem Druck aufgelöst werden:
-    Cp (ln T - ln To) = R (ln p - ln po) 
-    Cp/R ln(To/T) = po/p |To = Theata
-    p= po / (To/T)^Cp/R
-
-    Da bei trockenadiabatischer Erwärmung die Potentielle Temperatur erhalten ist, kann somit
-    Theta als gegeben vorrausgesetzt werden und somit der Druck des lcl berechnet werden.
+    Cp (ln T - ln T0) = R (ln p - ln p0) 
+    Cp/R ln(T0/T) = p0/p |T0 = Theata
+    p = p0 / (T0/T)^Cp/R
     '''
     thalvl = p0 / (pow((theta / temp), (1/cr['ROCP'])))
     return thalvl
 
-def thetas(theta, presvals):
-    return ((theta + cr['ZEROCNK']) / (np.power((1000. / presvals), cr['ROCP']))) - cr['ZEROCNK']
+
+def thetas(theta, presvals, p0=1000.):
+    '''
+    Parameters
+    ----------
+    Returns
+    -------
+    Temperature in K as numpy.array
+    '''
+    return (theta / (np.power((p0 / presvals), cr['ROCP'])))
 
 
 def drylift(p, t, td):
@@ -251,28 +247,34 @@ def drylift(p, t, td):
     Lifts a parcel to the LCL and returns its new level and temperature.
     Parameters
     ----------
-    p : number, numpy array
-        Pressure of initial parcel in hPa
-    t : number, numpy array
-        Temperature of inital parcel in C
-    td : number, numpy array
-        Dew Point of initial parcel in C
+    p : Pressure of initial parcel in hPa as float
+    t : Temperature of inital parcel in K as float
+    td : Dew Point of initial parcel in K as float
     Returns
     -------
-    p2 : number, numpy array
-        LCL pressure in hPa
-    t2 : number, numpy array
-        LCL Temperature in C
+    p2 : LCL pressure as float
+    t2 : LCL Temperature as float
     '''
-    t2 = lcltemp(t, td)
+    t2 = lcltemp(t - cr['ZEROCNK'], td - cr['ZEROCNK']) + cr['ZEROCNK']
     p2 = thalvl(theta(p, t, 1000.), t2)
     return p2, t2
 
 
 def wetlift(p, t, p2):
-    thta = theta(p, t, 1000.)
-    thetam = thta - wobf(thta) + wobf(t)
-    return satlift(p2, thetam)
+    '''
+    Lifts a parcel to the LCL and returns its new level and temperature.
+    Parameters
+    ----------
+    p : Pressure of initial parcel in hPa as float
+    t : Temperature of inital parcel in K as float
+    p2:
+    Returns
+    -------
+    Temperature in K as numpy.array
+    '''
+    thta = theta(p, t, 1000.) - cr['ZEROCNK']
+    thetam = thta - wobf(thta) + wobf(t - cr['ZEROCNK'])
+    return satlift(p2, thetam) + cr['ZEROCNK']
 
 
 def wetpot(p, t, p2=1000.):
@@ -281,21 +283,17 @@ def wetpot(p, t, p2=1000.):
 
 def wetbulb(p, t, td):
     '''
-    Calculates the wetbulb temperature (C) for the given parcel
     Parameters
     ----------
-    p : number
-        Pressure of parcel (hPa)
-    t : number
-        Temperature of parcel (C)
-    td : number
-        Dew Point of parcel (C)
+    p : Pressure of parcel in hPa as float
+    t : Temperature of parcel in K as float
+    td : Dew Point of parcel in K as float
     Returns
     -------
-    Wetbulb temperature (C)
+    Wetbulb temperature in K as float
     '''
-    p2, t2 = drylift(p, t, td)
-    return wetlift(p2, t2, p)
+    p2, t2 = drylift(p, t - cr['ZEROCNK'], td - cr['ZEROCNK'])
+    return wetlift(p2, t2, p) + cr['ZEROCNK']
 
 # Source: SHARPpy
 def thetae(p, t, q, p0=1000.):
@@ -303,17 +301,14 @@ def thetae(p, t, q, p0=1000.):
     Calculates the equlivalent potential temperature (K) for the given parcel
     Parameters
     ----------
-    p : number
-        Pressure of parcel (hPa)
-    t : number
-        Temperature of parcel (C)
-    q : number
-        specific humidity (kg/kg)
+    p : Pressure of parcel (hPa)
+    t : Temperature of parcel in K as numpy.array
+    q : specific humidity in kg/kg as numpy.array
     Returns
     -------
-    qulivalent potential temperature (K)
+    qulivalent potential temperature in K as numpy.array
     """
-    return ((t + cr['ZEROCNK'])+((2.501*1000000)/1004)*q) * np.power((p0/p), cr['ROCP'])
+    return (t + ((2.501*1000000)/1004)*q) * np.power((p0/p), cr['ROCP'])
 
 # ---------------------------------------------------------------------------------------------------------------------
 
