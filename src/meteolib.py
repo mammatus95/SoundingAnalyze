@@ -134,7 +134,6 @@ def saettigungsdampfdruck (t):
 
 
 def wobf(t):
-
     t = t - 20
     if type(t) == type(np.array([])) or type(t) == type(np.ma.array([])):
         npol = 1. + t * (-8.841660499999999e-3 + t * ( 1.4714143e-4 + t * (-9.671989000000001e-7 + t * (-3.2607217e-8 + t * (-3.8598073e-10)))))
@@ -161,10 +160,9 @@ def wobf(t):
 
 
 def satlift(p, thetam):
-
-    #if type(p) == type(np.array([p])) or type(thetam) == type(np.array([thetam])):
     if np.fabs(p - 1000.) - 0.001 <= 0: return thetam
     eor = 999
+    e2, t2 = np.nan, np.nan
     while np.fabs(eor) - 0.1 > 0:
         if eor == 999:                  # First Pass
             pwrp = np.power((p / 1000.), cr['ROCP'])
@@ -194,7 +192,6 @@ def thalvl(theta, t):
     -------
     Pressure level in hPa
     '''
-
     return 1000. / (np.power((theta / t), (1./cr['ROCP'])))
 
 
@@ -322,6 +319,7 @@ def uvwind(winddir, wind_speed):
     v = (-1) * np.multiply(wind_speed, np.cos(np.radians(winddir)))
     return u, v
 
+
 def uv2spddir(u, v):
 
     direction = np.rad2deg(np.arctan2(-u, v))
@@ -361,6 +359,7 @@ def non_parcel_bunkers_motion_experimental(u, v, ps, i_500m, i_5km, i_6km):
     lstv = mnv6 + (tmp * shru)
     
     return rstu, rstv, lstu, lstv, mnu6, mnv6
+
 
 def shear(ubot, vbot, utop, vtop):
     du = utop - ubot

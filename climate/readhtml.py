@@ -38,7 +38,7 @@ def readhtml (urlstring,filestr,mode=1):
 
 #urlstring = "http://weather.uwyo.edu/cgi-bin/sounding?region=europe&TYPE=TEXT%3ALIST&YEAR=2018&MONTH=" + sys.argv[1] + "&FROM=" + sys.argv[2] +"00&TO=" + sys.argv[2] + sys.argv[3] + "&STNM=10548"
 
-print(urlstring)
+#print(urlstring)
 # http://weather.uwyo.edu/cgi-bin/sounding?region=europe&TYPE=TEXT%3ALIST&YEAR=2020&MONTH=04&FROM=0412&TO=0412&STNM=10393
 #http://weather.uwyo.edu/cgi-bin/sounding?region=europe&TYPE=TEXT%3ALIST&YEAR=2017&MONTH=08&FROM=2812&TO=2812&STNM=10238
 

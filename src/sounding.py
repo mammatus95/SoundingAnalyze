@@ -45,9 +45,62 @@ class sounding():
         # strom relative
 
         # sb cape
-        self.SB_CAPE, self.SB_CIN, self.SB_LFC, self.SB_EL = self._compute_lift_parcel(0, self.pres_env[0], self.t_env[0], self.dew_env[0])
+        self.SB_CAPE, self.SB_CIN, self.SB_LFC, self.SB_EL, self.SB_parcel = self._compute_lift_parcel(0, self.pres_env[0], self.t_env[0], self.dew_env[0])
 
         # cape profile
+
+    def get_sounding_temp(self):
+        return self.t_env - meteolib.cr['ZEROCNK']
+
+
+    def get_sounding_tv(self):
+        return self.tvir_env - meteolib.cr['ZEROCNK']
+
+
+    def get_sounding_wetbulb(self):
+        return self.wetbulb_env - meteolib.cr['ZEROCNK']
+
+
+    def get_sounding_theta(self):
+        return self.theta_env - meteolib.cr['ZEROCNK']
+
+
+    def get_sounding_thetae(self):
+        return self.thetae_env - meteolib.cr['ZEROCNK']
+
+
+    def get_sounding_pres(self):
+        return self.pres_env
+
+
+    def get_sounding_dew(self):
+        return self.dew_env - meteolib.cr['ZEROCNK']
+
+
+    def get_sounding_mr(self):
+        return self.mr_env*1000  # g/kg
+
+
+    def get_sounding_height(self):
+        return self.height
+
+
+    def get_mw_0_6km(self):
+        return (0, 0)
+
+
+    def get_sorm_motion(self):
+        return 0, 0, 0, 0
+
+
+    # mean wind
+    def get_meanwind(self):
+        return meteolib.mean_wind(self.u_env, self.v_env, self.pres_env, stu=0, stv=0)
+
+
+    # surface based CAPE
+    def get_sb_cape(self):
+        return self.SB_CAPE
 
 
     def _compute_lift_parcel(self, index_start, start_pres, start_t, start_dew):
@@ -64,7 +117,7 @@ class sounding():
         buoyancy = self._compute_buoyancy(index_start, press_parcel, tv_parcel)
         print(buoyancy.max(),buoyancy.min())
         CAPE, CIN, LFC, EL = self._compute_CAPE(index_start, buoyancy)
-        return CAPE, CIN, LFC, EL
+        return CAPE, CIN, LFC, EL, tv_parcel
 
 
 
@@ -84,17 +137,13 @@ class sounding():
         LFC = np.nan
         EL = np.nan
         if np.nanmax(buoyancy) > 0:
-            # CAPE will be the total integrated positive buoyancy
-            B_pos = np.copy(buoyancy)
-            B_pos[np.where(B_pos < 0)] = 0
-            CAPE = np.nansum(np.multiply(dz, 0.5*np.add(B_pos[1:], B_pos[:-1])))
             # CIN will be the total negative buoyancy below the height of maximum
             B_max = np.nanmax(buoyancy)
             idx_max = np.where(buoyancy == B_max)[0][0]
             B_neg = np.copy(buoyancy)
             B_neg[np.where(B_neg > 0)] = 0
             B_neg[idx_max:] = 0
-            CIN = np.nansum(np.multiply(dz, 0.5*np.add(B_pos[1:], B_pos[:-1])))
+            CIN = np.nansum(np.multiply(dz, 0.5*np.add(B_neg[1:], B_neg[:-1])))
 
             # LFC will be the last instance of negative buoyancy before the
             # continuous interval that contains the maximum in buoyancy
@@ -106,6 +155,12 @@ class sounding():
                 LFC = 0.5*(self.height[np.max(fneg)] + self.height[np.max(fneg)+1])
             else:
                 LFC = self.height[index_start]
+
+            # CAPE will be the total integrated positive buoyancy
+            B_pos = np.copy(buoyancy)
+            B_pos[np.where(B_pos < 0)] = 0
+            B_pos[:np.max(fneg)] = 0  # consider LFC
+            CAPE = np.nansum(np.multiply(dz, 0.5*np.add(B_pos[1:], B_pos[:-1])))
 
             # EL will be last instance of positive buoyancy
             fpos = np.where(buoyancy > 0)[-1]
@@ -123,17 +178,7 @@ class sounding():
         wetzero = np.zeros(np.size(self.t_env))
         for i in range(0,np.size(self.t_env)):
             wetzero[i] = meteolib.wetbulb(self.pres_env[i], self.t_env[i], self.dew_env[i])
-        print(wetzero)
         return wetzero
-
-
-    # mean wind
-    def get_meanwind(self):
-        return meteolib.mean_wind(self.u_env, self.v_env, self.pres_env, stu=0, stv=0)
-
-    # surface based CAPE
-    def get_sb_cape(self):
-        return self.SB_CAPE
 
     # SRH
     def srh(self, sru, srv, high, mode=1):

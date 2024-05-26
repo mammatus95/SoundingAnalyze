@@ -1,13 +1,16 @@
 from matplotlib.axes import Axes
 import matplotlib.transforms as transforms
 import matplotlib.axis as maxis
+from matplotlib.axis import XTick as MaxisXTick
 import matplotlib.spines as mspines
-from matplotlib.projections import register_projection
 
 
 # The sole purpose of this class is to look at the upper, lower, or total
 # interval as appropriate and see what parts of the tick to draw, if any.
-class SkewXTick(maxis.XTick):
+class SkewXTick(MaxisXTick):
+    def __init__(self, axes, loc, major=True, **kwargs):
+        super().__init__(axes, loc, major=major, **kwargs)
+
     def update_position(self, loc):
         # This ensures that the new value of the location is set before
         # any other updates take place
@@ -77,7 +80,7 @@ class SkewXTick(maxis.XTick):
 # as well as create instances of the custom tick
 class SkewXAxis(maxis.XAxis):
     def _get_tick(self, major):
-        return SkewXTick(self.axes, None, '', major=major)
+        return SkewXTick(self.axes, None, major=major)
 
     def get_view_interval(self):
         return self.axes.upper_xlim[0], self.axes.lower_xlim[1]

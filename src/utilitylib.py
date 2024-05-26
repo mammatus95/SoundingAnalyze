@@ -44,7 +44,7 @@ def today_time_string():
 # ---------------------------------------------------------------------------------------------------------------------
 
 
-def station_number2strig(number_str):
+def station_number2string(number_str):
     """
     Parameters:
     -----------

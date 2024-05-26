@@ -3,7 +3,7 @@ import sys
 
 # project moduls
 from src.sounding import sounding
-from src.plotlib import plot_stuve
+from src.plotlib import plot_stuve, plot_skewT
 # ---------------------------------------------------------------------------------------------------------------------
 
 def main():
@@ -14,6 +14,7 @@ def main():
     print(station_sounding_obj.get_meanwind())
     print("Surface CAPE", station_sounding_obj.get_sb_cape())
     plot_stuve(station_sounding_obj, sys.argv[3])
+    plot_skewT(station_sounding_obj, sys.argv[3])
 
 if __name__ == "__main__":
     main()
