@@ -19,35 +19,57 @@ from src.skewT import SkewXAxes
 
 # ---------------------------------------------------------------------------------------------------------------------
 
+def add_adiabatic(ax, pmax=1000, pmin=100, dp=-10):
 
-def plot_stuve(station_sounding_obj, number_str):
-    fig, ax = plt.subplots(1, figsize=(15, 11))
-    plt.subplots_adjust(left=0.05, right=0.99, bottom=0.07, top=0.96)
-    ax.grid(True)
-
-    pmax = 1000
-    pmin = 100
-    dp = -10
     presvals = np.arange(pmax, pmin+dp, dp)
 
     # plot moist-adiabats
     for t in np.array([-40, -30, -20, -10, 0, 5, 10, 15, 20, 25, 30, 35, 40]):
         tw = []
         for p in presvals:
-            tw.append(meteolib.wetlift(1000., t + meteolib.cr['ZEROCNK'], p) - meteolib.cr['ZEROCNK'])
-        ax.semilogy(tw, presvals, 'b--', lw=0.7, alpha=0.7)
+            tw.append(meteolib.wetlift(1000., t, p))
+        ax.semilogy(tw, presvals, 'b--', lw=0.5, alpha=0.7)
 
     # plot dry adiabats
     for t in np.array([-80, -60, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150, 170, 190, 210, 230]):
-        ax.semilogy(meteolib.thetas(t + meteolib.cr['ZEROCNK'], presvals) - meteolib.cr['ZEROCNK'], presvals, 'r--', lw=0.7, alpha=0.7)
+        ax.semilogy(meteolib.thetas(t, presvals), presvals, 'r--', lw=0.5, alpha=0.7)
 
-    # lines of mixing ratio
-    pmin = 700
+    # plot lines of mixing ratio
+    pmin = 400
     presvals = np.arange(pmax, pmin+dp, dp)
 
-    mrr = np.append(station_sounding_obj.mr_env[0]*1000, np.array([0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0]))
+    mrr = np.array([0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0])
     for i in range(0, np.size(mrr)):
         ax.semilogy(meteolib.temp_at_mixrat(mrr[i], presvals), presvals, 'm--', lw=0.6, alpha=0.8)
+
+    return ax
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+
+def create_stuve():
+    fig, ax = plt.subplots(1, figsize=(15, 11))
+    plt.subplots_adjust(left=0.05, right=0.99, bottom=0.07, top=0.96)
+
+    ax.grid(True)
+
+    plt.yscale('log')
+
+    ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax.set_yticks(np.linspace(100, 1000, 10))
+    ax.set_ylim(1050, 400)
+    ax.set_xticks(np.arange(-90, 50, 10))
+    ax.set_xlim(-90, 50)
+
+    plt.xlabel("Temperatur [C]")
+    plt.ylabel("Druck [hPa]")
+    return fig, ax
+
+
+def plot_stuve(station_sounding_obj, number_str):
+    _, ax = create_stuve()
+    
+    ax = add_adiabatic(ax)
 
     # plot souding datas
     t_env = station_sounding_obj.get_sounding_temp()
@@ -87,8 +109,6 @@ def plot_stuve(station_sounding_obj, number_str):
              length=8, pivot='middle', barb_increments=dict(half=2.5, full=5, flag=25))
 
     ax.set_title(f"{station_number2string(number_str)}", fontsize=18)
-    plt.xlabel("Temperatur [C]")
-    plt.ylabel("Druck [hPa]")
     plt.savefig(f"{station_number2string(number_str)}_thermo.png")
     plt.close()
 
@@ -106,6 +126,10 @@ def plot_skewT(station_sounding_obj, number_str):
     plt.subplots_adjust(left=0.11, right=0.7, bottom=0.07, top=0.91)
     # Grid
     ax.grid(True)
+
+    # add lines
+    #ax = add_adiabatic(ax)
+
     # lines
     pmax = 1000
     pmin = 100
