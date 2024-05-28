@@ -9,14 +9,17 @@ import numpy as np
 # meteorology constants
 
 cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvins
-      'Rd': 287.0,                             # J/kg/K   dry air gas constant
-      'cpd': 1005.7,                           # J/kg/K   isobaric dry air specific heat capacit
+      'Rd': 287.04,                            # J/kg/K   dry air gas constant
       'Rv': 461.5,                             # J/kg/K   water vapor gas constant
-      'cpv': 1850.0,                           # J/kg/K   water vapor specific heat capacity (isobaric),
-      'cl': 4218.0,                            # J/kg/K   liquid water specific heat capacity
+      'cpd': 1005.7,                           # J/kg/K   isobaric dry air specific heat capacit
+      'cpv': 1850.0,   # 1870                  # J/kg/K   water vapor specific heat capacity (isobaric),
+      'cl': 4218.0,    # cpl 4190              # J/kg/K   liquid water specific heat capacity
+      'cpi': 2106.0,                           # J/kg/K   liquid water specific heat capacity
       'eps': 0.62197,                          # dimless  molecular weight ratio
       'ROCP': 0.28571426,                      # dimless  R over Cp
       'Lref': 2.5*1e6,                         # J/kg     latent heat of condensation at reference conditions
+      'pref': 611.65,                          # Pa       partial pressure of water vapor a triple point temp
+      'ttrip': 273.15,                         # K        triple point temp
       'G': 9.80665,                            # m/(s*s)  Gravity
       'Re': 6371008.767,                       # m        earth radius
       # 'omega': (2*math.pi)/(23*3600+56*60+4.1),   # rad/s    angular velocity of the earth
@@ -31,6 +34,9 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'Pi': math.pi,                           # Pi
       'e': 2.71828,                            # Euler Zahl
       'Pas2hPah': 36,                          # Pa/s to hPa/h
+      'ksq': 0.18,                             # VON KARMAN CONSTANT
+      'Pr': 1/3,                               # PRANDTL NUMBER
+      'Lm': 250,                               # HORIZONTAL MIXING LENGTH
       'c1': 0.0498646455,
       'c2': 2.4082965,
       'c3': 7.07475,

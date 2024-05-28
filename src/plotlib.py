@@ -68,7 +68,7 @@ def create_stuve():
 
 def plot_stuve(station_sounding_obj, number_str):
     _, ax = create_stuve()
-    
+
     ax = add_adiabatic(ax)
 
     # plot souding datas
