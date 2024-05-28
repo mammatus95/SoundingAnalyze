@@ -25,7 +25,7 @@ def data2df(data,station_id,datum_liste):
     """
     -----------------------------------------------------------------------------
     PRES   HGHT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT   THTA   THTE   THTV
-    hPa     m      C      C      %    g/kg    deg   knot     K      K      K 
+    hPa     m      C      C      %    g/kg    deg   knot     K      K      K
     -----------------------------------------------------------------------------
     """
     row=[[int(station_id),float(data[0]),datum_liste[0],datum_liste[1],datum_liste[2],datum_liste[3],float(data[2]),float(data[1]),float(data[3]),float(data[5]),int(data[6]),KT2MS(float(data[7])),float(data[8])]]
@@ -66,16 +66,16 @@ def readhtml (urlstring,datum_liste,station_id=10393,mode=1):
             if len(liste[i].split()) > 6:
                 print(liste[i])
     return radio_df
-    
+
 def test_read_wyoming(year=1992,month=4,day=20,time=12,station_id="10393"):
     radio_df=pd.DataFrame(columns = ['id','pres','year','month','day','time','temp','height','dew','mix','wdir','wspd','pot'])
     datum_liste=(year,month,day,time)
     urlstring = "http://weather.uwyo.edu/cgi-bin/sounding?region=europe&TYPE=TEXT%%3ALIST&YEAR=%.4d&MONTH=%.2d&FROM=%.2d%.2d&TO=%.2d%.2d&STNM=%s" % (year,month,day,time,day,time,station_id)
     radio_df = radio_df.append(readhtml(urlstring,datum_liste), ignore_index=True)
     radio_df
-    
+
 ################################################
-    
+
 def plot_tempseries(mean_series,max_series,min_series, std_series, temp,lvl='850', year='2020'):
     fig = plt.figure(figsize=(10,6))
     ax = plt.subplot(111)
@@ -132,7 +132,7 @@ def current_year(year=2020,station_id="10393",**kwargs):
     temp100 = np.full(12, np.nan)
     dt500 = np.full(12, np.nan)
     dt300 = np.full(12, np.nan)
-    
+
     for i in range(1,month+1):
         temp850[i-1]=radio_df[(radio_df['pres'] == 850.0) & ((radio_df['month'] == i))]['temp'].mean()+ZEROCNK
         temp700[i-1]=radio_df[(radio_df['pres'] == 700.0) & ((radio_df['month'] == i))]['temp'].mean()+ZEROCNK
@@ -172,7 +172,7 @@ def current_year(year=2020,station_id="10393",**kwargs):
     maxdt500,mdt500,mindt500,stddt500 = np.zeros(12),np.zeros(12),np.zeros(12),np.zeros(12)
     maxdt300,mdt300,mindt300,stddt300 = np.zeros(12),np.zeros(12),np.zeros(12),np.zeros(12)
 
-    
+
     for m in range(1,13):
         m850[m-1] = np.nanmean(hPa850[np.where(month==m)])
         max850[m-1] = np.nanmax(hPa850[np.where(month==m)])
@@ -193,19 +193,19 @@ def current_year(year=2020,station_id="10393",**kwargs):
         m500[m-1] = np.nanmean(hPa500[np.where(month==m)])
         max500[m-1] = np.nanmax(hPa500[np.where(month==m)])
         min500[m-1] = np.nanmin(hPa500[np.where(month==m)])
-        std500[m-1] = np.nanstd(hPa500[np.where(month==m)]) 
+        std500[m-1] = np.nanstd(hPa500[np.where(month==m)])
         m400[m-1] = np.nanmean(hPa400[np.where(month==m)])
         max400[m-1] = np.nanmax(hPa400[np.where(month==m)])
         min400[m-1] = np.nanmin(hPa400[np.where(month==m)])
-        std400[m-1] = np.nanstd(hPa400[np.where(month==m)]) 
+        std400[m-1] = np.nanstd(hPa400[np.where(month==m)])
         m300[m-1] = np.nanmean(hPa300[np.where(month==m)])
         max300[m-1] = np.nanmax(hPa300[np.where(month==m)])
         min300[m-1] = np.nanmin(hPa300[np.where(month==m)])
-        std300[m-1] = np.nanstd(hPa300[np.where(month==m)]) 
+        std300[m-1] = np.nanstd(hPa300[np.where(month==m)])
         m200[m-1] = np.nanmean(hPa200[np.where(month==m)])
         max200[m-1] = np.nanmax(hPa200[np.where(month==m)])
         min200[m-1] = np.nanmin(hPa200[np.where(month==m)])
-        std200[m-1] = np.nanstd(hPa200[np.where(month==m)]) 
+        std200[m-1] = np.nanstd(hPa200[np.where(month==m)])
         m100[m-1] = np.nanmean(hPa100[np.where(month==m)])
         max100[m-1] = np.nanmax(hPa100[np.where(month==m)])
         min100[m-1] = np.nanmin(hPa100[np.where(month==m)])
@@ -213,13 +213,13 @@ def current_year(year=2020,station_id="10393",**kwargs):
         mdt500[m-1] = np.nanmean(hPa850[np.where(month==m)]-hPa500[np.where(month==m)])
         maxdt500[m-1] = np.nanmax(hPa850[np.where(month==m)]-hPa500[np.where(month==m)])
         mindt500[m-1] = np.nanmin(hPa850[np.where(month==m)]-hPa500[np.where(month==m)])
-        stddt500[m-1] = np.nanstd(hPa850[np.where(month==m)]-hPa500[np.where(month==m)]) 
+        stddt500[m-1] = np.nanstd(hPa850[np.where(month==m)]-hPa500[np.where(month==m)])
         mdt300[m-1] = np.nanmean(hPa850[np.where(month==m)]-hPa300[np.where(month==m)])
         maxdt300[m-1] = np.nanmax(hPa850[np.where(month==m)]-hPa300[np.where(month==m)])
         mindt300[m-1] = np.nanmin(hPa850[np.where(month==m)]-hPa300[np.where(month==m)])
         stddt300[m-1] = np.nanstd(hPa850[np.where(month==m)]-hPa300[np.where(month==m)])
 
-                                 
+
     plot_tempseries(m850,max850,min850, std850,temp850, lvl='850',year=year)
     plot_tempseries(m700,max700,min700, std700,temp700, lvl='700',year=year)
     plot_tempseries(m500,max500,min500, std500,temp500, lvl='500',year=year)

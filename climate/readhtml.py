@@ -23,7 +23,7 @@ def readhtml (urlstring,filestr,mode=1):
             if len(liste[i].split()) > 10:
                 fobj.write(liste[i])
             #fobj.write("\n")
-    
+
         fobj.close()#schließt Datei
     else:
         #print (seq[2])
@@ -32,7 +32,7 @@ def readhtml (urlstring,filestr,mode=1):
         for i in range(6,len(liste)-1):
             if len(liste[i].split()) > 6:
                 fobj.write(liste[i])
-    
+
         fobj.close()#schließt Datei
 
 
@@ -54,7 +54,7 @@ else:
         readhtml(urlstring,filestr,2)
     else:
         urlstring = "http://weather.uwyo.edu/cgi-bin/sounding?region=europe&TYPE=TEXT%3ALIST&YEAR=2018&MONTH=" + sys.argv[1] + "&FROM=" + sys.argv[2] + sys.argv[3] + "&TO=" + sys.argv[2] + sys.argv[3] + "&STNM=" + sys.argv[4]
-        readhtml(urlstring,filestr,1) 
+        readhtml(urlstring,filestr,1)
 
     #print (urlstring)
 

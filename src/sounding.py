@@ -10,7 +10,7 @@ from src.utilitylib import load_yaml
 
 class sounding():
     # env : sounding profile
-    # parcel : 
+    # parcel :
     def __init__(self, urlstring):
         config = load_yaml('config.yml', yaml_path='./src/')
         print(config)
@@ -131,9 +131,9 @@ class sounding():
         print(lclp, lclt)
         tv_parcel = np.zeros(press_parcel.size, dtype=np.float64)
         for i in range(0, press_parcel.size):
-            if press_parcel[i] >= lclp:  # unsaturated 
+            if press_parcel[i] >= lclp:  # unsaturated
                 tv_parcel[i] = meteolib.thetas(meteolib.theta(lclp, lclt, p0=1000.), press_parcel[i])
-            else:  # saturated 
+            else:  # saturated
                 tv_parcel[i] = meteolib.wetlift(lclp, lclt, press_parcel[i])  # not virtuel temperature
 
         buoyancy = self._compute_buoyancy(index_start, press_parcel, tv_parcel)
@@ -266,7 +266,7 @@ class sounding():
     def _compute_bulkshear(self, hight):
         distance = np.abs(self.height - hight)
         idx = np.argmin(distance)
-        return self._compute_shear(self.u_env[0], self.v_env[0], 
+        return self._compute_shear(self.u_env[0], self.v_env[0],
                                    np.mean(self.u_env[idx-1:idx+1]), np.mean(self.v_env[idx-1:idx+1]))
 
 
@@ -282,5 +282,5 @@ class sounding():
         rstv = self.mnv6 - (tmp * shru)
         lstu = self.mnu6 - (tmp * shrv)
         lstv = self.mnv6 + (tmp * shru)
-        
+
         return rstu, rstv, lstu, lstv

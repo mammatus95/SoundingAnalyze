@@ -12,12 +12,12 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'Rd': 287.0,                             # J/kg/K   dry air gas constant
       'cpd': 1005.7,                           # J/kg/K   isobaric dry air specific heat capacit
       'Rv': 461.5,                             # J/kg/K   water vapor gas constant
-      'cpv': 1850.0,                           # J/kg/K   water vapor specific heat capacity (isobaric), 
+      'cpv': 1850.0,                           # J/kg/K   water vapor specific heat capacity (isobaric),
       'cl': 4218.0,                            # J/kg/K   liquid water specific heat capacity
       'eps': 0.62197,                          # dimless  molecular weight ratio
       'ROCP': 0.28571426,                      # dimless  R over Cp
       'Lref': 2.5*1e6,                         # J/kg     latent heat of condensation at reference conditions
-      'G': 9.80665,                            # m/(s*s)  Gravity 
+      'G': 9.80665,                            # m/(s*s)  Gravity
       'Re': 6371008.767,                       # m        earth radius
       # 'omega': (2*math.pi)/(23*3600+56*60+4.1),   # rad/s    angular velocity of the earth
       'omega': 7.29211505392569e-05,           # rad/s    angular velocity of the earth
@@ -31,11 +31,11 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'Pi': math.pi,                           # Pi
       'e': 2.71828,                            # Euler Zahl
       'Pas2hPah': 36,                          # Pa/s to hPa/h
-      'c1': 0.0498646455, 
-      'c2': 2.4082965, 
-      'c3': 7.07475, 
-      'c4': 38.9114, 
-      'c5': 0.0915, 
+      'c1': 0.0498646455,
+      'c2': 2.4082965,
+      'c3': 7.07475,
+      'c4': 38.9114,
+      'c5': 0.0915,
       'c6': 1.2035
       }
 
@@ -89,7 +89,7 @@ def temp_at_mixrat(w, p):
     Temperature (C) of air at given mixing ratio and pressure
     '''
     x = np.log10(w * p / (622. + w))
-    x = (np.power(10., ((cr['c1'] * x) + cr['c2'])) - cr['c3'] + 
+    x = (np.power(10., ((cr['c1'] * x) + cr['c2'])) - cr['c3'] +
          (cr['c4'] * np.power((np.power(10, (cr['c5'] * x)) - cr['c6']), 2))) - cr['ZEROCNK']
     return x
 
@@ -217,7 +217,7 @@ def potlvl(theta, temp, p0=1000.):
     -------
     Pressure Level (hPa [float]) of the parcel
 
-    Cp (ln T - ln T0) = R (ln p - ln p0) 
+    Cp (ln T - ln T0) = R (ln p - ln p0)
     Cp/R ln(T0/T) = p0/p |T0 = Theata
     p = p0 / (T0/T)^Cp/R
     '''
@@ -310,7 +310,7 @@ def thetae(p, t, q, p0=1000.):
 def uvwind(winddir, wind_speed):
     """
     This function convert wind speed and direction in to u,v component.
-    The Winddirection is given in degree, 
+    The Winddirection is given in degree,
     """
 
     u = (-1) * np.multiply(wind_speed, np.sin(np.radians(winddir)))

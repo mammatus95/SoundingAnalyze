@@ -59,7 +59,7 @@ def plot_stuve(station_sounding_obj, number_str):
     ax.plot(station_sounding_obj.get_sounding_dew(), pres_env, '-g', lw=1.5)
 
     t_parcel = station_sounding_obj.SB_parcel - meteolib.cr['ZEROCNK']
-    
+
     ax.plot(t_parcel, pres_env, '-r', lw=1.8)
 
     if station_sounding_obj.SB_CAPE > 10:
@@ -81,11 +81,11 @@ def plot_stuve(station_sounding_obj, number_str):
     anzahl = (np.where(station_sounding_obj.pres_env==100))[0][0]
     iter_bar = int(anzahl/anzahl_bar)
     x_value = np.zeros(np.size(station_sounding_obj.pres_env[:anzahl:iter_bar])) + 45
-    ax.barbs(x_value, station_sounding_obj.pres_env[:anzahl:iter_bar], 
-             station_sounding_obj.u_env[:anzahl:iter_bar], station_sounding_obj.v_env[:anzahl:iter_bar], 
-             station_sounding_obj.wind_speed[:anzahl:iter_bar], 
+    ax.barbs(x_value, station_sounding_obj.pres_env[:anzahl:iter_bar],
+             station_sounding_obj.u_env[:anzahl:iter_bar], station_sounding_obj.v_env[:anzahl:iter_bar],
+             station_sounding_obj.wind_speed[:anzahl:iter_bar],
              length=8, pivot='middle', barb_increments=dict(half=2.5, full=5, flag=25))
-    
+
     ax.set_title(f"{station_number2string(number_str)}", fontsize=18)
     plt.xlabel("Temperatur [C]")
     plt.ylabel("Druck [hPa]")
@@ -210,7 +210,7 @@ def plot_skewT(station_sounding_obj, number_str):
     ax2.plot(mw6[0], mw6[1], 'o', color = 'grey', alpha=0.7, zorder=2)  # 0-6km Mean weight wind
 
     ax2.axhline(y=0, color='k', zorder=1, lw=1.1)
-    ax2.axvline(x=0, color='k', zorder=1, lw=1.1) 
+    ax2.axvline(x=0, color='k', zorder=1, lw=1.1)
 
     ax2.set_xlim(-clim, clim)
     ax2.set_ylim(-clim, clim)
@@ -248,14 +248,14 @@ def plot_skewT(station_sounding_obj, number_str):
     elif (wmaxshr < 1000.0) and (wmaxshr >= 400.0):
         fig.text(x_value,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr), color='orange', weight='bold')
     else:
-        fig.text(x_value,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr)) 
+        fig.text(x_value,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr))
     """
     if pw >= 40.0:
         fig.text(x_value, 0.15,r"PW : %.1f $kg/m^2$" % (pw), color='r', weight='bold')
     elif (pw < 40.0) and (pw > 30.0):
         fig.text(x_value, 0.15,r"PW : %.1f $kg/m^2$" % (pw), color='orange', weight='bold')
     else:
-        fig.text(x_value, 0.15,r"PW : %.1f $kg/m^2$" % (pw)) 
+        fig.text(x_value, 0.15,r"PW : %.1f $kg/m^2$" % (pw))
     """
     #fig.text(x_value, 0.18, "Specific humidity (100mb) : %.1f g/kg" % (q_mean))
     #fig.text(x_value, 0.15, "Lapse Rate (850-500hPa) : %.1f K/km" %(lapse))
