@@ -103,7 +103,7 @@ def plot_skewT(station_sounding_obj, number_str):
     # fig = plt.figure(figsize=(6.5875, 6.2125))
     fig = plt.figure(figsize=(9, 6.2125))
     ax = fig.add_subplot(111, projection='skewx')
-    plt.subplots_adjust(left=0.11, right=0.6, bottom=0.07, top=0.91)
+    plt.subplots_adjust(left=0.11, right=0.7, bottom=0.07, top=0.91)
     # Grid
     ax.grid(True)
     # lines
@@ -157,11 +157,18 @@ def plot_skewT(station_sounding_obj, number_str):
     ax.yaxis.set_major_formatter(plt.ScalarFormatter())
     ax.set_yticks(np.linspace(100, 1000, 10))
     ax.set_ylim(1050, 100)
+
     ax.xaxis.set_major_locator(plt.MultipleLocator(10))
-    ax.set_xlim(-30, 40)
+    #ax.set_xticks(np.arange(-30, 50, 10))
+    labels = [item.get_text() for item in ax.get_xticklabels()]
+    labels[60] = ' '
+    labels[59] = ' '
+    labels[:53] = ' '
+    ax.set_xticklabels(labels)
+    ax.set_xlim(-35, 40)
 
     # Draw the hodograph on the Skew-T.
-    ax2 = plt.axes([.625, .40, .25, .50])
+    ax2 = plt.axes([.725, .40, .25, .50])
 
     ax2.get_xaxis().set_visible(False)
     ax2.get_yaxis().set_visible(False)
@@ -196,10 +203,11 @@ def plot_skewT(station_sounding_obj, number_str):
     clevs = np.arange(0,10,1)
     cbar.ax.set_xticklabels(labels=clevs[::1])
     mw6 = station_sounding_obj.get_mw_0_6km()
+
     rstu, rstv, lstu, lstv = station_sounding_obj.get_sorm_motion()
-    ax2.plot(rstu, rstv, 'ro', alpha=0.9, zorder=2) # Plot Bunker's Storm motion right mover as a red dot
-    ax2.plot(lstu, lstv, 'bo', alpha=0.9, zorder=2) # Plot Bunker's Storm motion left mover as a blue dot
-    ax2.plot(mw6[0], mw6[1], 'o', color = 'grey', alpha=0.7, zorder=2) # 0-6km Mean weight wind
+    ax2.plot(rstu, rstv, 'ro', alpha=0.9, zorder=2)  # Plot Bunker's Storm motion right mover as a red dot
+    ax2.plot(lstu, lstv, 'bo', alpha=0.9, zorder=2)  # Plot Bunker's Storm motion left mover as a blue dot
+    ax2.plot(mw6[0], mw6[1], 'o', color = 'grey', alpha=0.7, zorder=2)  # 0-6km Mean weight wind
 
     ax2.axhline(y=0, color='k', zorder=1, lw=1.1)
     ax2.axvline(x=0, color='k', zorder=1, lw=1.1) 
@@ -223,41 +231,34 @@ def plot_skewT(station_sounding_obj, number_str):
         ax2.text(-4.48, -29.7, "30 m/s")
         ax2.text(-4.48, -19.7, "20 m/s")
         ax2.text(-4.48,-9.7,"10 m/s")
-    #ax2.annotate("10 m/s", xy=(0.5, 0.5), xycoords='axes fraction', fontsize=15)
-    #fig.text(0.750, 0.38, "km")
-    fig.text(0.750, 0.38, "km")
-    
-    val = 180./np.pi
-    direction = np.arctan2(-mw6[0],-mw6[1]) * val
-    if ( direction < 0):
-        direction += 360
-    fig.text(0.625, 0.33, r"Mean Wind (0-6km) : %3.0f$^{\circ}$/%.0f m/s" % (direction, np.sqrt(mw6[0]*mw6[0]+mw6[1]*mw6[1])))
-    """
-    direction = np.arctan2(-mw8[0],-mw8[1]) * val
-    if ( direction < 0):
-        direction += 360;
-    fig.text(0.625, 0.27, r"Mean Wind (0-8km) : %3.0f$^{\circ}$/%.0f m/s" % (direction, np.sqrt(mw8[0]*mw8[0]+mw8[1]*mw8[1])))
-    """
-    #fig.text(0.625, 0.30, "ML CAPE : %.1f J/kg" % (2843.2))
-    fig.text(0.625, 0.27, "MU CAPE : %.1f J/kg" % (station_sounding_obj.get_sb_cape()))
-    #fig.text(0.625, 0.24, "BRN ML : %.1f" % (brn))
-    #if (wmaxshr >= 1000.0):
-    #    fig.text(0.625,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr), color='r', weight='bold')
-    #elif (wmaxshr < 1000.0) and (wmaxshr >= 400.0):
-    #    fig.text(0.625,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr), color='orange', weight='bold')
-    #else:
-    #    fig.text(0.625,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr)) 
+    fig.text(0.850, 0.39, "km")
+    x_value = 0.725
+    mw_dir, mw_speed = meteolib.uv2spddir(mw6[0], mw6[1])
+    fig.text(x_value, 0.33, r"Mean Wind (0-6km) : %3.0f$^{\circ}$/%.0f m/s" % (mw_dir, mw_speed))
+    mw8 = station_sounding_obj.get_mw_0_8km()
+    mw_dir, mw_speed = meteolib.uv2spddir(mw8[0], mw8[1])
+    fig.text(x_value, 0.30, r"Mean Wind (0-8km) : %3.0f$^{\circ}$/%.0f m/s" % (mw_dir, mw_speed))
+
+    #fig.text(x_value, 0.30, "ML CAPE : %.1f J/kg" % (2843.2))
+    fig.text(x_value, 0.27, "SB CAPE : %.1f J/kg" % (station_sounding_obj.get_sb_cape()))
+    #fig.text(x_value, 0.24, "BRN ML : %.1f" % (brn))
+    wmaxshr = station_sounding_obj.get_wmaxshear()
+    if (wmaxshr >= 1000.0):
+        fig.text(x_value,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr), color='r', weight='bold')
+    elif (wmaxshr < 1000.0) and (wmaxshr >= 400.0):
+        fig.text(x_value,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr), color='orange', weight='bold')
+    else:
+        fig.text(x_value,0.21, r"WMAXSHEAR ML : %.1f $m^2/s^2$" % (wmaxshr)) 
     """
     if pw >= 40.0:
-        fig.text(0.625,0.15,r"PW : %.1f $kg/m^2$" % (pw), color='r', weight='bold')
+        fig.text(x_value, 0.15,r"PW : %.1f $kg/m^2$" % (pw), color='r', weight='bold')
     elif (pw < 40.0) and (pw > 30.0):
-        fig.text(0.625,0.15,r"PW : %.1f $kg/m^2$" % (pw), color='orange', weight='bold')
+        fig.text(x_value, 0.15,r"PW : %.1f $kg/m^2$" % (pw), color='orange', weight='bold')
     else:
-        fig.text(0.625,0.15,r"PW : %.1f $kg/m^2$" % (pw)) 
+        fig.text(x_value, 0.15,r"PW : %.1f $kg/m^2$" % (pw)) 
     """
-    #fig.text(0.625, 0.18, "Specific humidity (100mb) : %.1f g/kg" % (q_mean))
-    #fig.text(0.625, 0.15, "Lapse Rate (850-500hPa) : %.1f K/km" %(lapse))
-
+    #fig.text(x_value, 0.18, "Specific humidity (100mb) : %.1f g/kg" % (q_mean))
+    #fig.text(x_value, 0.15, "Lapse Rate (850-500hPa) : %.1f K/km" %(lapse))
     try:
         plt.savefig(f"{station_number2string(number_str)}_skewT.png")
     except ValueError:

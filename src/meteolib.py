@@ -96,16 +96,13 @@ def temp_at_mixrat(w, p):
 
 def lcltemp(t, td):
     '''
-    Returns the temperature (C) of a parcel when raised to its LCL.
     Parameters
     ----------
-    t : number, numpy array
-        Temperature of the parcel (C)
-    td : number, numpy array
-        Dewpoint temperature of the parcel (C)
+    t : Temperature of the parcel in C as float
+    td : Dewpoint temperature of the parcel in C as float
     Returns
     -------
-    Temperature (C) of the parcel at it's LCL.
+    Temperature of lcl level in C as float
     '''
     s = t - td
     dlt = s * (1.2185 + 0.001278 * t + s * (-0.00219 + 1.173e-5 * s -
@@ -298,7 +295,7 @@ def thetae(p, t, q, p0=1000.):
     Calculates the equlivalent potential temperature (K) for the given parcel
     Parameters
     ----------
-    p : Pressure of parcel (hPa)
+    p : Pressure of parcel in hPa as numpy.array
     t : Temperature of parcel in K as numpy.array
     q : specific humidity in kg/kg as numpy.array
     Returns
@@ -308,6 +305,7 @@ def thetae(p, t, q, p0=1000.):
     return (t + ((2.501*1000000)/1004)*q) * np.power((p0/p), cr['ROCP'])
 
 # ---------------------------------------------------------------------------------------------------------------------
+
 
 def uvwind(winddir, wind_speed):
     """
@@ -322,43 +320,18 @@ def uvwind(winddir, wind_speed):
 
 def uv2spddir(u, v):
 
-    direction = np.rad2deg(np.arctan2(-u, v))
+    direction = np.rad2deg(np.arctan2(-u, -v))
 
     if isinstance(direction, np.ndarray):
         direction = np.remainder(direction + 360, 360)
     else:
         direction = (direction + 360) % 360
 
-    return (np.deg2rad(direction), np.sqrt(u*u + v*v))
+    return (direction, np.sqrt(u*u + v*v))
 
 
 def mean_wind(u, v, ps, stu=0.0, stv=0.0):
     return np.average(u, weights=ps) - stu, np.average(v, weights=ps) - stv
-
-
-def non_parcel_bunkers_motion_experimental(u, v, ps, i_500m, i_5km, i_6km):
-    d = 7.5
-    # sfc-500m Mean Wind
-    mnu500m, mnv500m = mean_wind(u[:i_500m], v[:i_500m], ps[:i_500m])
-    
-    # 5.5km-6.0km Mean Wind
-    mnu5500m_6000m, mnv5500m_6000m = mean_wind(u[i_5km:i_6km], v[i_5km:i_6km], ps[i_5km:i_6km])
-    
-    # shear vector of the two mean winds
-    shru = mnu5500m_6000m - mnu500m
-    shrv = mnv5500m_6000m - mnv500m
-    
-    # SFC-6km Mean Wind
-    mnu6, mnv6 =  mean_wind(u[:i_6km], v[:i_6km], ps[:i_6km])
-    
-    # Bunkers Right Motion
-    tmp = d / np.sqrt(shru*shru + shrv*shrv)
-    rstu = mnu6 + (tmp * shrv)
-    rstv = mnv6 - (tmp * shru)
-    lstu = mnu6 - (tmp * shrv)
-    lstv = mnv6 + (tmp * shru)
-    
-    return rstu, rstv, lstu, lstv, mnu6, mnv6
 
 
 def shear(ubot, vbot, utop, vtop):

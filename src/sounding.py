@@ -42,12 +42,26 @@ class sounding():
         self.vshr = np.zeros(self.t_env.size)
         self.vshr[1:] = np.subtract(self.v_env[1:], self.v_env[:-1])
 
+        self.mnu500m, self.mnv500m = self._compute_meanwind(0, 500)  # sfc-500m Mean Wind
+        self.mnu5500m_6000m, self.mnv5500m_6000m = self._compute_meanwind(5500, 6000)  # 5.5km-6.0km Mean Wind
+        self.mnu6, self.mnv6 = self._compute_meanwind(0, 6000)  # SFC-6km Mean Wind
+        self.mnu8, self.mnv8 = self._compute_meanwind(0, 8000)  # SFC-8km Mean Wind
+        self.brnshear = self._compute_brnshear(self.mnu500m, self.mnv500m, self.mnu5500m_6000m, self.mnv5500m_6000m)
+        self.rstu, self.rstv, self.lstu, self.lstv = self._compute_bunkers_motion()
+        self.bulk_shear0_6km = self._compute_bulkshear(6000)
+        self.bulk_shear0_3km = self._compute_bulkshear(3000)
+        self.bulk_shear0_1km = self._compute_bulkshear(3000)
+
         # strom relative
 
         # sb cape
         self.SB_CAPE, self.SB_CIN, self.SB_LFC, self.SB_EL, self.SB_parcel = self._compute_lift_parcel(0, self.pres_env[0], self.t_env[0], self.dew_env[0])
 
+        # WMAXSHEAR
+        self.WMAXSHEAR = np.sqrt(2*self.SB_CAPE) * self.bulk_shear0_6km
+
         # cape profile
+
 
     def get_sounding_temp(self):
         return self.t_env - meteolib.cr['ZEROCNK']
@@ -86,11 +100,19 @@ class sounding():
 
 
     def get_mw_0_6km(self):
-        return (0, 0)
+        return (self.mnu6, self.mnv6)
+
+
+    def get_mw_0_8km(self):
+        return (self.mnu8, self.mnv8)
 
 
     def get_sorm_motion(self):
-        return 0, 0, 0, 0
+        return self.rstu, self.rstv, self.lstu, self.lstv
+
+
+    def get_wmaxshear(self):
+        return self.WMAXSHEAR
 
 
     # mean wind
@@ -120,7 +142,6 @@ class sounding():
         return CAPE, CIN, LFC, EL, tv_parcel
 
 
-
     def _compute_buoyancy(self, index_start, press_parcel, tv_parcel):
         buoyancy = np.zeros(press_parcel.size, dtype=np.float64)
         #i = 0
@@ -129,6 +150,7 @@ class sounding():
         #    i += 1
         buoyancy = meteolib.cr['G'] * np.divide(np.subtract(tv_parcel, self.tvir_env[index_start:]), self.tvir_env[index_start:])
         return buoyancy
+
 
     def _compute_CAPE(self, index_start, buoyancy):
         dz = np.subtract(self.height[index_start+1:], self.height[index_start:-1])
@@ -173,12 +195,14 @@ class sounding():
 
         return CAPE, CIN, LFC, EL
 
+
     # wetbulb
     def _calc_wetbulb(self):
         wetzero = np.zeros(np.size(self.t_env))
         for i in range(0,np.size(self.t_env)):
             wetzero[i] = meteolib.wetbulb(self.pres_env[i], self.t_env[i], self.dew_env[i])
         return wetzero
+
 
     # SRH
     def srh(self, sru, srv, high, mode=1):
@@ -219,3 +243,44 @@ class sounding():
             i += 1
             h = 0
         return H
+
+
+    def _compute_meanwind(self, hight_bot, hight_top):
+        index = np.where((self.height >= hight_bot) & (self.height < hight_top))[0]
+        return meteolib.mean_wind(self.u_env[index], self.v_env[index], self.pres_env[index], stu=0, stv=0)
+
+
+    def _compute_shear(self, u_bot, v_bot, u_top, v_top):
+        du = u_top - u_bot
+        dv = v_top - v_bot
+        return np.sqrt(du*du + dv*dv)
+
+
+    def _compute_brnshear(self, u_bot, v_bot, u_top, v_top):
+        # https://www.spc.noaa.gov/exper/soundings/help/shear.html
+        du = u_top - u_bot
+        dv = v_top - v_bot
+        return 0.5*(du*du + dv*dv)
+
+
+    def _compute_bulkshear(self, hight):
+        distance = np.abs(self.height - hight)
+        idx = np.argmin(distance)
+        return self._compute_shear(self.u_env[0], self.v_env[0], 
+                                   np.mean(self.u_env[idx-1:idx+1]), np.mean(self.v_env[idx-1:idx+1]))
+
+
+    def _compute_bunkers_motion(self):
+        d = 7.5
+
+        # shear vector of the two mean winds
+        shru = self.mnu5500m_6000m - self.mnu500m
+        shrv = self.mnv5500m_6000m - self.mnv500m
+        # Bunkers Right Motion
+        tmp = d / np.sqrt(shru*shru + shrv*shrv)
+        rstu = self.mnu6 + (tmp * shrv)
+        rstv = self.mnv6 - (tmp * shru)
+        lstu = self.mnu6 - (tmp * shrv)
+        lstv = self.mnv6 + (tmp * shru)
+        
+        return rstu, rstv, lstu, lstv
