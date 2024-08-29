@@ -2,10 +2,10 @@
 import math
 import numpy as np
 
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 # Source for the most functions are sharppy
 
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 # meteorology constants
 
 cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvins
@@ -18,7 +18,9 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'eps': 0.62197,                          # dimless  molecular weight ratio
       'ROCP': 0.28571426,                      # dimless  R over Cp
       'Lref': 2.5*1e6,                         # J/kg     latent heat of condensation at reference conditions
-      'pref': 611.65,                          # Pa       partial pressure of water vapor a triple point temp
+      'xlv': 2501000,                          # J/kg     reference latent heat of vaporization at the triple point temperature
+      'xls': 2834000,                          # J/kg     reference latent heat of sublimation at the triple point temperature
+      'eref': 611.65,   # 611.2                # Pa       partial pressure of water vapor a triple point temp
       'ttrip': 273.15,                         # K        triple point temp
       'G': 9.80665,                            # m/(s*s)  Gravity
       'Re': 6371008.767,                       # m        earth radius
@@ -44,8 +46,7 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'c5': 0.0915,
       'c6': 1.2035
       }
-
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 
 
 def virtuelle(q, t):
@@ -310,7 +311,7 @@ def thetae(p, t, q, p0=1000.):
     """
     return (t + ((2.501*1000000)/1004)*q) * np.power((p0/p), cr['ROCP'])
 
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 
 
 def uvwind(winddir, wind_speed):
