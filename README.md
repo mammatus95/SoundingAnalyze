@@ -14,7 +14,7 @@ conda activate SoundingAnalyze
 ```
 ## How to run?
 ```bash
-python3 main.py 2018-12-07 00 10393
+python3 main.py 2024-06-18 12 10548
 ```
 
 ## Example

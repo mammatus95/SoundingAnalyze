@@ -38,10 +38,12 @@ def readhtml2numpy(urlstring, dtype=np.float64):
     mystr = mybytes.decode("utf8")
     fp.close()
     # sounding datas are between the PRE Tags
-    # print(mystr)
     mystr = mystr.split("<PRE>")[1]
     mystr = mystr.split("</PRE>")[0][314:]
-    # split numpy arra a part
+    mystr = mystr.replace("                                                              \n",
+                        " -99.0  -99.0  -99.0  -99.0  -99.0  -99.0  -99.0  -99.0  -99.0\n")
+    #print(mystr)
+    # split numpy.array a part
     return (np.fromstring(mystr, dtype=dtype, sep='  ')[0::11],  # pressure
             np.fromstring(mystr, dtype=dtype, sep='  ')[1::11],  # height
             np.fromstring(mystr, dtype=dtype, sep='  ')[2::11],  # temperature

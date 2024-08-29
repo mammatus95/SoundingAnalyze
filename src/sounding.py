@@ -15,7 +15,11 @@ class sounding():
         config = load_yaml('config.yml', yaml_path='./src/')
         print(config)
         self.pres_env, self.height, self.t_env, self.dew_env, self.mr_env, winddir, self.wind_speed = readhtml2numpy(urlstring)
-        index_array = np.where(self.pres_env > config["pmin"])
+
+        if self.pres_env[0] == 1000 and self.t_env[0] == -99.0:
+            index_array = np.where( (self.pres_env > config["pmin"]) & (self.pres_env < 1000))
+        else:
+            index_array = np.where(self.pres_env > config["pmin"])
         self.pres_env = self.pres_env[index_array]
         self.height = self.height[index_array]
         self.t_env = self.t_env[index_array]
@@ -153,6 +157,27 @@ class sounding():
 
 
     def _compute_CAPE(self, index_start, buoyancy):
+        """
+        Compute the Convective Availability Potential Energy (CAPE) from the given buoyancy profile.
+
+        Parameters
+        ----------
+        index_start : int
+            The index of the starting point of the buoyancy profile.
+        buoyancy : numpy.ndarray
+            The buoyancy profile.
+
+        Returns
+        -------
+        CAPE : float
+            The Convective Availability Potential Energy.
+        CIN : float
+            The Convective Inhibition.
+        LFC : float
+            The Level of Free Convection.
+        EL : float
+            The Equilibrium Level.
+        """
         dz = np.subtract(self.height[index_start+1:], self.height[index_start:-1])
         CAPE = np.nan
         CIN = np.nan
@@ -196,8 +221,15 @@ class sounding():
         return CAPE, CIN, LFC, EL
 
 
-    # wetbulb
     def _calc_wetbulb(self):
+        """
+        Calculate the wetbulb temperature for each level of the environment.
+
+        Returns
+        -------
+        wetzero : numpy.ndarray
+            The wetbulb temperature for each level of the environment.
+        """
         wetzero = np.zeros(np.size(self.t_env))
         for i in range(0,np.size(self.t_env)):
             wetzero[i] = meteolib.wetbulb(self.pres_env[i], self.t_env[i], self.dew_env[i])
@@ -212,10 +244,10 @@ class sounding():
         srv : storm relative wind v component
         SRH = int_bot^top (ushr*srv - vshr*sru) dz
         """
+        assert len(sru) == len(self.agl)
+        assert len(srv) == len(self.agl)
         srh = 0
-        h = 0
         i = 0
-
         while (self.agl[i] < high):
             if (mode == 1) or (mode == 2):
                 srh += self.ushr[i] * ((srv[i] + srv[i+1])/2.0) - self.vshr[i] * ((sru[i] + sru[i+1])/2.0)
@@ -232,7 +264,17 @@ class sounding():
 
 
     def streamwise(self, sru, srv, high):
-        h = 0
+        """
+        Calculate the integral of the streamwise velocity component (ushr*srv - vshr*sru)
+        over a given height interval using the trapezoidal rule.
+
+        Parameters:
+        sru, srv : 1D arrays of storm relative wind u and v components respectively
+        high : float, the height above the surface to integrate up to
+
+        Returns:
+        H : float, the integral of (ushr*srv - vshr*sru) dz over the given height interval
+        """
         i = 0
         H = 0
         while (self.agl[i] < high):
@@ -246,24 +288,63 @@ class sounding():
 
 
     def _compute_meanwind(self, hight_bot, hight_top):
+        """
+        Compute the mean wind at a given height interval.
+
+        Parameters:
+        hight_bot : float, the bottom height of the interval
+        hight_top : float, the top height of the interval
+
+        Returns:
+        tuple, containing the mean wind u component, mean wind v component and mean pressure over the given height interval
+        """
         index = np.where((self.height >= hight_bot) & (self.height < hight_top))[0]
         return meteolib.mean_wind(self.u_env[index], self.v_env[index], self.pres_env[index], stu=0, stv=0)
 
 
     def _compute_shear(self, u_bot, v_bot, u_top, v_top):
+        """
+        Compute the magnitude of the shear vector between two points
+        specified by their wind components.
+
+        Parameters:
+        u_bot, v_bot : wind components at the bottom point
+        u_top, v_top : wind components at the top point
+
+        Returns:
+        float, magnitude of the shear vector between the two points
+        """
         du = u_top - u_bot
         dv = v_top - v_bot
         return np.sqrt(du*du + dv*dv)
 
 
     def _compute_brnshear(self, u_bot, v_bot, u_top, v_top):
-        # https://www.spc.noaa.gov/exper/soundings/help/shear.html
+        """
+        Compute the bulk shear at a given height.
+        Source: https://www.spc.noaa.gov/exper/soundings/help/shear.html
+        Parameters:
+        u_bot, v_bot : wind components at the bottom point
+        u_top, v_top : wind components at the top point
+
+        Returns:
+        float, bulk shear at the given point
+        """
         du = u_top - u_bot
         dv = v_top - v_bot
         return 0.5*(du*du + dv*dv)
 
 
     def _compute_bulkshear(self, hight):
+        """
+        Compute the bulk shear at a given height.
+        Source: https://www.spc.noaa.gov/exper/soundings/help/shear.html
+        Parameters:
+        hight : float, the height at which to compute the shear
+
+        Returns:
+        float, bulk shear at the given point
+        """
         distance = np.abs(self.height - hight)
         idx = np.argmin(distance)
         return self._compute_shear(self.u_env[0], self.v_env[0],
@@ -271,6 +352,14 @@ class sounding():
 
 
     def _compute_bunkers_motion(self):
+        """
+        Compute the motion vectors of the Bunkers wind drift.
+
+        Returns:
+        tuple : (rstu, rstv, lstu, lstv), the motion vectors of the Bunkers wind
+                drift. rstu, rstv is the vector of the right side of the storm,
+                lstu, lstv is the vector of the left side of the storm.
+        """
         d = 7.5
 
         # shear vector of the two mean winds

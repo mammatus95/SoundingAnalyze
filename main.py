@@ -9,6 +9,7 @@ from src.plotlib import plot_stuve, plot_skewT
 def main():
     urlstring = (f"http://weather.uwyo.edu/cgi-bin/bufrraob.py?datetime={sys.argv[1]}%20{sys.argv[2]}:00:00"
                  f"&id={sys.argv[3]}&type=TEXT:LIST")
+    #print(urlstring)
 
     station_sounding_obj = sounding(urlstring)
     print(station_sounding_obj.get_meanwind())
