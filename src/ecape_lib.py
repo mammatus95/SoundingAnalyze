@@ -1,6 +1,7 @@
 # ----------------------------------------------------------------------------------------------------------------------------
 #                  Entraining CAPE Library
-#
+# Author : John M. Petersa
+# Rework : Morten Kretschmer
 # https://arxiv.org/pdf/2301.04712
 # https://figshare.com/articles/software/ECAPE_scripts/21859818?file=42303630
 #
@@ -15,16 +16,9 @@ import numpy as np
 from scipy.special import lambertw
 from scipy.special import sici
 from meteolib import cr
-# ----------------------------------------------------------------------------------------------------------------------------
-
-def comp_cdwave(F):
-   gamma_em = np.euler_gamma
-   return 4*(F*np.sin(2/F) - (F**2)*(np.sin(1/F)**2) - cosint(2/F) + np.log(2/F) - 1 + gamma_em)
+#from wavefunction_lib import comp_cdwave
 
 
-def cosint(x):
-   _, ci = sici(x)
-   return ci
 
 # ----------------------------------------------------------------------------------------------------------------------------
 # descriminator function between liquid and ice (i.e., omega defined in the
@@ -35,6 +29,7 @@ def omega(T,T1,T2):
 
 
 def domega(T,T1,T2):
+    # T1 equal to T2 should raise a ZeroDivisionError due to rounding errors (probably not intended by author)
     return (np.heaviside(T1-T, 1) - np.heaviside(T2-T, 1))/(T2-T1)
 
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -60,11 +55,59 @@ def get_qs(qt, rs):
 # ----------------------------------------------------------------------------------------------------------------------------
 # moist static energy
 def compute_moist_static_energy(T0, q0, z0):
+    """
+    Compute the moist static energy (MSE) of a parcel.
+
+    Parameters
+    ----------
+    T0 : numpy.ndarray
+        Temperature of the parcel (K)
+    q0 : numpy.ndarray
+        Total water mass fraction of the parcel (kg/kg)
+    z0 : numpy.ndarray
+        Height above ground level of the parcel (m)
+
+    Returns
+    -------
+    MSE : numpy.ndarray
+        Moist static energy of the parcel (J/kg)
+    """
+    
     return cr['cp']*T0 + cr['xlv']*q0 + cr['G']*z0
 
 # ----------------------------------------------------------------------------------------------------------------------------
 # saturation mixing ratio
 def compute_rsat(T, p, T1, T2, iceflag=0):
+    """
+    This function computes the saturation mixing ratio, using the integrated
+    CLAUSIUS CLAPEYRON Equation (eq. 7-12 in Peters et al. 2022).
+    
+    Parameters
+    ----------
+    T : numpy.ndarray
+        Temperature of the air (K)
+    p : numpy.ndarray
+        Pressure of the air (Pa)
+    T1 : float
+        warmest mixed-phase temperature?
+    T2 : float
+        coldest mixed-phase temperature?
+    iceflag : int
+        0: compute saturation mixing ratio with respect to liquid water
+        1: compute saturation mixing ratio as a linear combination of mixing
+            ratio with respect to liquid and ice water
+        2: compute saturation mixing ratio with respect to ice
+
+    Returns
+    -------
+    qsat : numpy.ndarray
+        Saturation mixing ratio of the air (kg/kg)
+    
+    References
+    ----------
+    .. [1]  https://doi-org.ezaccess.libraries.psu.edu/10.1175/JAS-D-21-0118.1
+
+    """
 
     omeg = omega(T,T1,T2)
     epsilon = cr['Rd']/cr['Rv']
@@ -96,7 +139,6 @@ def compute_rsat(T, p, T1, T2, iceflag=0):
 # ----------------------------------------------------------------------------------------------------------------------------
 # lapse rate for an unsaturated parcel
 def drylift(T, qv, T0, qv0, fracent):
-    
     """
     Calculate the lapse rate of an unsaturated parcel.
 
@@ -132,8 +174,8 @@ def compute_LCL(T, qv, p):
     cpm = (1 - qv)*cr['cpd'] + qv*cr['cpv']
     Rm = (1 - qv)*cr['Rd'] + qv*cr['Rv']
     
-    a = cpm/Rm + ( cr['cl'] - cr['cpv'] )/cr['Rv']
-    b = -(cr['xlv'] - (cr['cpv'] - cr['cl'])*cr['ttrip'])/(cr['Rv']*T)
+    a = cpm/Rm + ( cr['cpl'] - cr['cpv'] )/cr['Rv']
+    b = -(cr['xlv'] - (cr['cpv'] - cr['cpl'])*cr['ttrip'])/(cr['Rv']*T)
     c = b/a
     
     r_sat = compute_rsat(T,p,0,273.15,253.15)
@@ -221,9 +263,9 @@ def moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2):
     dOMEGA = domega(T, T1, T2)
     
     
-    cpm = (1 - qt)*cr['cpd'] + qv*cr['cpv'] + (1 - OMEGA)*(qt-qv)*cr['cl'] + OMEGA*(qt-qv)*cr['cpi']
-    Lv = cr['xlv'] + (T - cr['ttrip'])*(cr['cpv'] - cr['cl'])
-    Li = (cr['xls']-cr['xlv']) + (T - cr['ttrip'])*(cr['cl'] - cr['cpi'])
+    cpm = (1 - qt)*cr['cpd'] + qv*cr['cpv'] + (1 - OMEGA)*(qt-qv)*cr['cpl'] + OMEGA*(qt-qv)*cr['cpi']
+    Lv = cr['xlv'] + (T - cr['ttrip'])*(cr['cpv'] - cr['cpl'])
+    Li = (cr['xls']-cr['xlv']) + (T - cr['ttrip'])*(cr['cpl'] - cr['cpi'])
     Rm0 = (1 - q0)*cr['Rd'] + q0*cr['Rv']
     
 
@@ -728,7 +770,7 @@ def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
     cr['xlv']=2501000 #LATENT HEAT OF VAPORIZATION AT TRIPLE POINT TEMPERATURE
     cr['xls']=2834000 #LATENT HEAT OF SUBLIMATION AT TRIPLE POINT TEMPERATURE
     cr['cpv']=1870 #HEAT CAPACITY OF WATER VAPOR AT CONSTANT PRESSURE
-    cr['cl']=4190 #HEAT CAPACITY OF LIQUID WATER
+    cr['cpl']=4190 #HEAT CAPACITY OF LIQUID WATER
     cr['cpi']=2106 #HEAT CAPACITY OF ICE
     pref=611.65 #REFERENCE VAPOR PRESSURE OF WATER VAPOR AT TRIPLE POINT TEMPERATURE
     cr['ttrip']=273.15 #TRIPLE POINT TEMPERATURE
@@ -822,6 +864,130 @@ def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
 # ----------------------------------------------------------------------------------------------------------------------------
 
 def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
+    #[CAPE,CIN,LFC,EL]
+
+    #this function computes CAPE and CIN
+    
+    #input arguments
+    #T0: sounding profile of temperature (in K)
+    #p0: sounding profile of pressure (in Pa)
+    #q0: sounding profile of water vapor mass fraction (in kg/kg)
+    #start_loc: index of the parcel starting location (set to 1 for the
+    #lowest: level in the sounding)
+    #fracent: fractional entrainment rate (in m^-1)
+ 
+    # this function computes CAPE and CIN
+
+    # contants
+    c_d = 0.2  # drag coeficient on a sphere
+    Lambda = 0.6  # RATIO OF ASCENT RATE OF THERMAL TO ITS MAX W
+    alpha = 0.8  # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
+
+    # COMPUTE A VERTICAL PROFILE OF THE MAGNITUDE OF VERTICAL WIND SHEAR
+    dz = np.zeros(u0.shape)
+    dz[0 : u0.shape[0] - 1] = z0[1 : u0.shape[0]] - z0[0 : u0.shape[0] - 1]
+    dudz = np.zeros(u0.shape)
+    dvdz = np.zeros(u0.shape)
+    dudz[0 : dudz.shape[0] - 1] = (u0[1 : dudz.shape[0]] - u0[0 : dudz.shape[0] - 1]) / dz[0 : dudz.shape[0] - 1]
+    dvdz[0 : dudz.shape[0] - 1] = (v0[1 : dudz.shape[0]] - v0[0 : dudz.shape[0] - 1]) / dz[0 : dudz.shape[0] - 1]
+    S = np.sqrt(dudz**2 + dvdz**2)
+
+    # COMPUTE THE LIFTED PARCEL BUOYANCY
+    _, Qv_lif, Qt_lif, B_lif = lift_parcel_adiabatic(
+        T0, p0, q0, start_loc, fracent, prate, z0, T1, T2
+    )
+
+    # CALCULATE THE LIFTED CONDENSATION LEVEL
+    qdiff = abs(Qt_lif - Qv_lif)  # FIGURE OUT THE FIRST HEIGHT WHERE QV STARTS DEVIATING FROM QT, IMPLYING CONDENSATION
+    if np.logical_and(~np.isnan(qdiff[1]), np.nanmax(qdiff) > 0):
+        lcl_ind = np.where(qdiff > 0)[0][0]
+        LCL = z0[lcl_ind]
+    else:
+        LCL = 1000
+        lcl_ind = np.where(abs(LCL - z0) == np.amin(abs(LCL - z0)))[0][0]
+
+    # IF WE HAVE SOME POSITIVE BUOYANCY, PROCEED
+    if np.nanmax(B_lif) > 0:
+        # MAKE A NEW MATRIX THAT WILL ONLY CONTAIN THE POSITIVE PART OF BUOYANCY
+        B_pos = np.zeros(B_lif.shape)
+        B_pos[:] = B_lif[:]
+
+        # GET RID OF ALL NEGATIVE BUOYANCY BELOW THE LCL
+        B_pos[0 : lcl_ind] = 0
+        wpos = np.where(B_pos > 0)[0]
+        if len(wpos) > 0:
+            wpos = wpos[0]  # WPOS CONTAINS INDEX OF LCL.  SET TO 0 IF THERE IS NO POSTIVE BUOYANCY
+        else:
+            wpos = lcl_ind
+        B_pos[0 : wpos] = 0
+        dz = z0[1 : z0.shape[0]] - z0[0 : z0.shape[0] - 1]
+
+        # LFC WILL BE THE LAST INSTANCE OF NEGATIVE BUOYANCY BEFORE THE PARCEL REACHES ITS CONTINUOUS INTERVAL OF POSITIVE BUOY
+        mx = np.nanmax(B_lif)
+        imx = np.where(B_lif == mx)
+        imx = imx[0][0]
+
+        fneg = np.where(B_lif < 0)
+        fneg = fneg[0]
+        inn = np.where(fneg < imx)
+
+        inn = inn[0]
+        fneg = fneg[inn]
+        if len(inn) > 0:
+            LFC = 0.5 * z0[np.max(fneg)] + 0.5 * z0[np.max(fneg) + 1]
+        else:
+            LFC = z0[start_loc]
+
+        # EL WILL BE THE LAST INSTANCE OF POSITIVE BUOYANCY
+        fpos = np.where(B_lif > 0)
+        fpos = fpos[0]
+        EL = 0.5 * z0[np.max(fpos)] + 0.5 * z0[np.max(fpos) + 1]
+
+        # INITIALIZE PROFILE OF SQUARED VERTICAL VELOCITY (I.E., VERTICAL KINETIC ENERGY)
+        WSQ_prof = np.zeros(B_pos.shape[0])
+        WSQ_prof[start_loc] = (V_SR**2) / 2  # LOWER BOUNADRY CONDITION ON VERTICAL KE IS THE KE OF INFLOW
+        uprime_prof = np.zeros(B_pos.shape[0])  # INITIALIZE UPRIME PROFILE
+        for iz in np.arange(0, WSQ_prof.shape[0] - 1, 1):  # VERTICALLY INTEGRATE
+            B_on = B_pos[iz]  # STORE THE CURRENT BUOYANCY
+            ebuoy_fac = 1 / (1 + 2 * (alpha**2) * (Radius**2) / ((EL - LFC)**2))  # SCALE FACTOR THAT ACCOUNTS FOR EFFECITVE BUOYANCY
+            # ns_drag = -2.5*c_d*(3/8)/Radius #COEFICIENT ON THE NON-SHEARED PART OF DRAG
+            ns_drag = -c_d * (3 / 8) / Radius  # COEFICIENT ON THE NON-SHEARED PART OF DRAG
+            s_drag = -(c_d / Radius) * (1 - Lambda) / (Lambda**2)  # COEFICIENT ON THE SHEARED PART OF DRAG
+            sh_drag = (  1 / (0.5 * np.sqrt(2 * WSQ_prof[iz - 1])) ) * (
+                3 * c_d / (8 * Radius))  # SHEARED DRAG TERM
+
+            if np.sqrt(2 * WSQ_prof[iz - 1]) < 1:  # IF WE HAVE VERY SMALL VERTICAL VELOICTY (LESS THAN 1 M/S, WE NEED TO ZERO OUT THE SHEAR DRAG TERM OR THINGS BLOW UP)
+                sh_drag = 0
+
+            # NOW VERTICALLY INTEGRATE THE UPRIME AND WSQ EQUATIONS TOGETHER, FOLLOWING EQ. XX AND XX IN XX RESPECTIVELY
+            uprime_prof[iz + 1] = uprime_prof[iz - 1] + (z0[iz + 1] - z0[iz]) * (
+                -sh_drag * uprime_prof[iz]**2 + S[iz]
+            )
+            WSQ_prof[iz + 1] = WSQ_prof[iz] + (z0[iz + 1] - z0[iz]) * (
+                ebuoy_fac * B_on + ns_drag * WSQ_prof[iz] + s_drag * uprime_prof[iz] * np.sqrt(2 * WSQ_prof[iz]))
+        
+        # WE WILL OUTPUT THE MAXIMUM KE AS THE "CAPE" ARGUMENT                                                                                                          
+        CAPE = np.nanmax(WSQ_prof)
+        
+        # SET THE EL TO THE HEIGHT OF MAXIMUM VERTICAL VELOCITY
+        mxval = np.nanmax(WSQ_prof)
+        fnval = np.where(WSQ_prof == mxval)
+        LFC = LCL
+        if fnval[0].shape[0] > 0:
+            EL = z0[fnval[0][0]]
+        else:
+            EL = np.nan
+    else:
+        #IF WE HAVE NO POSITIVE BUOYANCY, SET EVERYTHING TO 0S AND NANS
+        CAPE = 0      
+        LFC = np.nan
+        EL = np.nan
+        B_pos = np.zeros(T0.shape)
+        
+
+    return CAPE, LFC, EL, B_pos
+
+def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
 #[CAPE,CIN,LFC,EL]
 
     #this function computes CAPE and CIN
@@ -834,14 +1000,10 @@ def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
     #lowest: level in the sounding)
     #fracent: fractional entrainment rate (in m^-1)
     
-    #CONSTANTS
-    cr['Rd']=287.04 #dry gas constant
-    cr['Rv']=461.5 #water vapor gas constant
-    epsilon=cr['Rd']/cr['Rv'] # %RATO OF THE TWO
-    g=9.81 #gravitational acceleration
-    c_d = 0.2 #DRAG COEFICIENT ON A SPHERE
-    Lambda=0.6 #RATIO OF ASCENT RATE OF THERMAL TO ITS MAX W
-    alpha=0.8 #ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
+    # contants
+    c_d = 0.2 # drag coeficient on a sphere
+    Lambda=0.6 # RATIO OF ASCENT RATE OF THERMAL TO ITS MAX W
+    alpha=0.8 # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
     
     #COMPUTE A VERTICAL PROFILE OF THE MAGNITUDE OF VERTICAL WIND SHEAR
     dz = np.zeros(u0.shape)
@@ -850,10 +1012,10 @@ def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
     dvdz = np.zeros(u0.shape)
     dudz[0:dudz.shape[0]-1]=(u0[1:dudz.shape[0]]-u0[0:dudz.shape[0]-1])/dz[0:dudz.shape[0]-1]
     dvdz[0:dudz.shape[0]-1]=(v0[1:dudz.shape[0]]-v0[0:dudz.shape[0]-1])/dz[0:dudz.shape[0]-1]  
-    S = np.sqrt( dudz**2 + dvdz**2)                                            
+    S = np.sqrt(dudz**2 + dvdz**2)                                            
     
     #COMPUTE THE LIFTED PARCEL BUOYANCY
-    T_lif,Qv_lif,Qt_lif,B_lif=lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2)
+    _,Qv_lif,Qt_lif,B_lif=lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2)
     
     #CALCULATE THE LIFTED CONDENSATION LEVEL
     qdiff = abs(Qt_lif - Qv_lif) #FIGURE OUT THE FIRST HEIGHT WHERE QV STARTS DEVIATING FROM QT, IMPLYING CONDENSATION
