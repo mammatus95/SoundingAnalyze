@@ -14,8 +14,7 @@
 
 import numpy as np
 from scipy.special import lambertw
-from scipy.special import sici
-from meteolib import cr
+from src.meteolib import cr
 #from wavefunction_lib import comp_cdwave
 
 
@@ -30,6 +29,8 @@ def omega(T,T1,T2):
 
 def domega(T,T1,T2):
     # T1 equal to T2 should raise a ZeroDivisionError due to rounding errors (probably not intended by author)
+    if T1 == T2:
+        raise ZeroDivisionError
     return (np.heaviside(T1-T, 1) - np.heaviside(T2-T, 1))/(T2-T1)
 
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -73,7 +74,7 @@ def compute_moist_static_energy(T0, q0, z0):
         Moist static energy of the parcel (J/kg)
     """
     
-    return cr['cp']*T0 + cr['xlv']*q0 + cr['G']*z0
+    return cr['cpl']*T0 + cr['xlv']*q0 + cr['G']*z0
 
 # ----------------------------------------------------------------------------------------------------------------------------
 # saturation mixing ratio
@@ -133,6 +134,8 @@ def compute_rsat(T, p, T1, T2, iceflag=0):
         esl = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**(term1)
         esl = min( esl , p*0.5 )
         qsat = epsilon*esl/(p-esl)
+    else:
+        raise ValueError("iceflag must be 0, 1, or 2!")
     return qsat
 
 
@@ -562,7 +565,7 @@ def compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL):
     for iz in np.arange(1,MSE0bar.shape[0],1):
         MSE0bar[iz] = 0.5*np.sum((MSE0[0:iz] + MSE0[1:iz+1])*(z0[1:iz+1]-z0[0:iz]))/(z0[iz]-z0[0])
     
-    int_arg = - (cr['G']/(cr['cp']*T0)) * (MSE0bar - MSE0_star)
+    int_arg = - (cr['G']/(cr['cpl']*T0)) * (MSE0bar - MSE0_star)
     ddiff = abs(z0-LFC)
     mn = np.min(ddiff)
     ind_LFC = np.where(ddiff == mn)[0][0]

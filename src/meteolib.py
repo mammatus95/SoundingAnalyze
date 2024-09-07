@@ -13,8 +13,8 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'Rv': 461.5,                             # J/kg/K   water vapor gas constant
       'cpd': 1005.7,                           # J/kg/K   isobaric dry air specific heat capacit
       'cpv': 1850.0,   # 1870                  # J/kg/K   water vapor specific heat capacity (isobaric),
-      'cl': 4218.0,    # cpl 4190              # J/kg/K   liquid water specific heat capacity
-      'cpi': 2106.0,                           # J/kg/K   liquid water specific heat capacity
+      'cpl': 4218.0,   # cpl 4190              # J/kg/K   liquid water specific heat capacity
+      'cpi': 2106.0,                           # J/kg/K   ice specific heat capacity
       'eps': 0.62197,                          # dimless  molecular weight ratio
       'ROCP': 0.28571426,                      # dimless  R over Cp
       'Lref': 2.5*1e6,                         # J/kg     latent heat of condensation at reference conditions
