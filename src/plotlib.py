@@ -27,12 +27,12 @@ def add_adiabatic(ax, pmax=1000, pmin=100, dp=-10):
     for t in np.array([-40, -30, -20, -10, 0, 5, 10, 15, 20, 25, 30, 35, 40]):
         tw = []
         for p in presvals:
-            tw.append(meteolib.wetlift(1000., t, p))
+            tw.append(meteolib.wetlift(1000., t + meteolib.cr['ZEROCNK'], p) - meteolib.cr['ZEROCNK'])
         ax.semilogy(tw, presvals, 'b--', lw=0.5, alpha=0.7)
 
     # plot dry adiabats
     for t in np.array([-80, -60, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150, 170, 190, 210, 230]):
-        ax.semilogy(meteolib.thetas(t, presvals), presvals, 'r--', lw=0.5, alpha=0.7)
+        ax.semilogy(meteolib.thetas(t + meteolib.cr['ZEROCNK'], presvals) - meteolib.cr['ZEROCNK'], presvals, 'r--', lw=0.5, alpha=0.7)
 
     # plot lines of mixing ratio
     pmin = 400
@@ -100,7 +100,7 @@ def plot_stuve(station_sounding_obj, number_str):
 
     # wind bars
     anzahl_bar = 45
-    anzahl = (np.where(station_sounding_obj.pres_env==100))[0][0]
+    anzahl = (np.where(station_sounding_obj.pres_env <= 100))[0][0]
     iter_bar = int(anzahl/anzahl_bar)
     x_value = np.zeros(np.size(station_sounding_obj.pres_env[:anzahl:iter_bar])) + 45
     ax.barbs(x_value, station_sounding_obj.pres_env[:anzahl:iter_bar],

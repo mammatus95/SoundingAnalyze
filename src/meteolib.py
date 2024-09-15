@@ -225,10 +225,11 @@ def potlvl(theta, temp, p0=1000.):
     Pressure Level (hPa [float]) of the parcel
 
     Cp (ln T - ln T0) = R (ln p - ln p0)
-    Cp/R ln(T0/T) = p0/p |T0 = Theata
-    p = p0 / (T0/T)^Cp/R
+    Cp/R ln(T/T0) = ln(p/p0) |T0 = Theata
+    p/p0 = (T/T0)^Cp/R
+    p = p0 / (T/T0)^Cp/R
     '''
-    thalvl = p0 / (pow((theta / temp), (1/cr['ROCP'])))
+    thalvl = p0 / (pow((theta / temp), (1./cr['ROCP'])))
     return thalvl
 
 
@@ -239,8 +240,12 @@ def thetas(theta, presvals, p0=1000.):
     Returns
     -------
     Temperature in K as numpy.array
+
+    Cp (ln T - ln T0) = R (ln p - ln p0)
+    Cp/R ln(T/T0) = ln(p/p0)
+    T = T0 * (p/p0)^R/Cp    
     '''
-    return (theta / (np.power((p0 / presvals), cr['ROCP'])))
+    return (theta * np.power(presvals/p0, cr['ROCP']))
 
 
 def drylift(p, t, td):
@@ -334,7 +339,7 @@ def uv2spddir(u, v):
     else:
         direction = (direction + 360) % 360
 
-    return (direction, np.sqrt(u*u + v*v))
+    return (direction, np.sqrt(np.square(u) + np.square(v)))
 
 
 def mean_wind(u, v, ps, stu=0.0, stv=0.0):

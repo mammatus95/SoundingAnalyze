@@ -4,9 +4,7 @@
 # 
 # ----------------------------------------------------------------------------------------------------------------------------
 
-from scipy import interpolate
 import numpy as np
-import csv
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
@@ -20,7 +18,7 @@ from src.ecape_lib import lift_parcel_adiabatic
 
 def main():
 
-    sound_filename = 'src/example/sounding.txt'
+    sound_filename = 'src/example/sounding_base.txt'
     Z, Th, r_v, u, v, p_sfc = read_modelsounding(sound_filename)
     Z, Th, r_v, u, v = interpolating_sounding(Z, Th, r_v, u, v)
 

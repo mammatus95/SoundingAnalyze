@@ -4,43 +4,76 @@ import numpy as np
 import src.meteolib as meteolib
 from src.readhtml_bufr import readhtml2numpy
 from src.utilitylib import load_yaml
-
+from src.cm1_lib import read_cm1sounding
 # ---------------------------------------------------------------------------------------------------------------------
 
 
 class sounding():
     # env : sounding profile
     # parcel :
-    def __init__(self, urlstring):
+    def __init__(self, inputstring):
         config = load_yaml('config.yml', yaml_path='./src/')
         print(config)
-        self.pres_env, self.height, self.t_env, self.dew_env, self.mr_env, winddir, self.wind_speed = readhtml2numpy(urlstring)
 
-        if self.pres_env[0] == 1000 and self.t_env[0] == -99.0:
-            index_array = np.where( (self.pres_env > config["pmin"]) & (self.pres_env < 1000))
-        else:
+        if "weather.uwyo.edu" in inputstring:
+            # read the html data
+            self.pres_env, self.height, self.t_env, self.dew_env, self.mr_env, winddir, self.wind_speed = readhtml2numpy(inputstring)
+
+            if self.pres_env[0] == 1000 and self.t_env[0] == -99.0:
+                index_array = np.where( (self.pres_env > config["pmin"]) & (self.pres_env < 1000))
+            else:
+                index_array = np.where(self.pres_env > config["pmin"])
+            
+            self.pres_env = self.pres_env[index_array]
+            self.height = self.height[index_array]
+            self.t_env = self.t_env[index_array]
+            self.dew_env = self.dew_env[index_array]
+            self.mr_env = self.mr_env[index_array]
+            winddir = winddir[index_array]
+            self.wind_speed = self.wind_speed[index_array]
+
+            self.mr_env /= 1000
+            self.t_env += meteolib.cr['ZEROCNK']
+            self.dew_env += meteolib.cr['ZEROCNK']
+
+            self.agl = np.subtract(self.height, self.height[0])
+            self.q_env = meteolib.mixrat_to_q(self.mr_env)
+            self.tvir_env = meteolib.virtuelle(self.q_env, self.t_env)
+            self.theta_env = meteolib.theta(self.pres_env, self.t_env, p0=1000.)
+            self.thetae_env = meteolib.thetae(self.pres_env, self.t_env, self.q_env, p0=1000.)
+            self.wetbulb_env = self._calc_wetbulb()
+
+            # kinematic transformations
+            self.u_env, self.v_env = meteolib.uvwind(winddir, self.wind_speed)
+
+        elif ".txt" in inputstring or ".csv" in inputstring:
+            self.pres_env, self.height, self.theta_env, self.mr_env, self.u_env, self.v_env = read_cm1sounding(inputstring)
+            
             index_array = np.where(self.pres_env > config["pmin"])
-        self.pres_env = self.pres_env[index_array]
-        self.height = self.height[index_array]
-        self.t_env = self.t_env[index_array]
-        self.dew_env = self.dew_env[index_array]
-        self.mr_env = self.mr_env[index_array]
-        winddir = winddir[index_array]
-        self.wind_speed = self.wind_speed[index_array]
+            self.pres_env = self.pres_env[index_array]
+            self.height = self.height[index_array]
+            self.theta_env = self.theta_env[index_array]
+            self.mr_env = self.mr_env[index_array]
+            self.u_env = self.u_env[index_array]
+            self.v_env = self.v_env[index_array]
 
-        self.mr_env /= 1000
-        self.t_env += meteolib.cr['ZEROCNK']
-        self.dew_env += meteolib.cr['ZEROCNK']
+            self.agl = np.subtract(self.height, self.height[0])
+            self.t_env = meteolib.thetas(self.theta_env, self.pres_env, p0=1000.)
+            self.dew_env = meteolib.temp_at_mixrat(self.mr_env*1000, self.pres_env) + meteolib.cr['ZEROCNK']
 
-        self.agl = np.subtract(self.height, self.height[0])
-        self.q_env = meteolib.mixrat_to_q(self.mr_env)
-        self.tvir_env = meteolib.virtuelle(self.q_env, self.t_env)
-        self.theta_env = meteolib.theta(self.pres_env, self.t_env, p0=1000.)
-        self.thetae_env = meteolib.thetae(self.pres_env, self.t_env, self.q_env, p0=1000.)
-        self.wetbulb_env = self._calc_wetbulb()
+            self.q_env = meteolib.mixrat_to_q(self.mr_env)
+            self.tvir_env = meteolib.virtuelle(self.q_env, self.t_env)
+            #self.theta_env = meteolib.theta(self.pres_env, self.t_env, p0=1000.)
+            self.thetae_env = meteolib.thetae(self.pres_env, self.t_env, self.q_env, p0=1000.)
+            self.wetbulb_env = self._calc_wetbulb()
+
+            # kinematic transformations
+            winddir, self.wind_speed = meteolib.uv2spddir(self.u_env, self.v_env)
+
+        else:
+            raise FileNotFoundError(f"File not found: {inputstring}")
 
         # kinematic transformations
-        self.u_env, self.v_env = meteolib.uvwind(winddir, self.wind_speed)
         self.ushr = np.zeros(self.t_env.size)
         self.ushr[1:] = np.subtract(self.u_env[1:], self.u_env[:-1])
         self.vshr = np.zeros(self.t_env.size)
@@ -202,6 +235,7 @@ class sounding():
                 LFC = 0.5*(self.height[np.max(fneg)] + self.height[np.max(fneg)+1])
             else:
                 LFC = self.height[index_start]
+                fneg = index_start
 
             # CAPE will be the total integrated positive buoyancy
             B_pos = np.copy(buoyancy)
@@ -211,7 +245,11 @@ class sounding():
 
             # EL will be last instance of positive buoyancy
             fpos = np.where(buoyancy > 0)[-1]
-            EL = 0.5*(self.height[np.max(fpos)] + self.height[np.max(fpos)+1])
+            if (np.max(fpos) >= (self.height.size-1)):
+                EL = np.nan
+                print('Warning: no equilibrium level found. Equilibrium level is higher then the top of the sounding.')
+            else:
+                EL = 0.5*(self.height[np.max(fpos)] + self.height[np.max(fpos)+1])
         else:
             CAPE = 0
             CIN = 0

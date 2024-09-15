@@ -44,9 +44,9 @@ def readhtml2numpy(urlstring, dtype=np.float64):
                         " -99.0  -99.0  -99.0  -99.0  -99.0  -99.0  -99.0  -99.0  -99.0\n")
     #print(mystr)
     # split numpy.array a part
-    return (np.fromstring(mystr, dtype=dtype, sep='  ')[0::11],  # pressure
-            np.fromstring(mystr, dtype=dtype, sep='  ')[1::11],  # height
-            np.fromstring(mystr, dtype=dtype, sep='  ')[2::11],  # temperature
+    return (np.fromstring(mystr, dtype=dtype, sep='  ')[0::11],  # pressure in hPa
+            np.fromstring(mystr, dtype=dtype, sep='  ')[1::11],  # height in m
+            np.fromstring(mystr, dtype=dtype, sep='  ')[2::11],  # temperature in degree C
             np.fromstring(mystr, dtype=dtype, sep='  ')[3::11],  # dewpoint
             np.fromstring(mystr, dtype=dtype, sep='  ')[5::11],  # mixing ratio
             np.fromstring(mystr, dtype=dtype, sep='  ')[6::11],  # wind direction

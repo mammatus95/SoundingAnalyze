@@ -14,15 +14,17 @@ conda activate SoundingAnalyze
 ```
 ## How to run?
 ```bash
-python3 main.py 2024-06-18 12 10548
+python3 run_uwyo.py 2024-06-18 12 10548
+#or
+python3 run_cm1.py
 ```
 
 ## Example
 
-![Stuve](example/10184thermo.png)
+![Stuve](images/10184thermo.png)
 
-![Skew-T](example/10184skewT.png)
+![Skew-T](images/10184skewT.png)
 
-![Hodograph](example/10184wind.png)
+![Hodograph](images/10184wind.png)
 
-![Historical](example/hist_500.png)
+![Historical](images/hist_500.png)
