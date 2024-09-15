@@ -23,11 +23,11 @@ from src.meteolib import cr
 # descriminator function between liquid and ice (i.e., omega defined in the
 # beginning of section 2e in Peters et al. 2022)
 
-def omega(T,T1,T2):
+def omega(T, T1, T2):
     return ((T - T1)/(T2-T1))*np.heaviside((T - T1)/(T2-T1), 1)*np.heaviside((1 - (T - T1)/(T2-T1)), 1) + np.heaviside(-(1 - (T - T1)/(T2-T1)), 1)
 
 
-def domega(T,T1,T2):
+def domega(T, T1, T2):
     # T1 equal to T2 should raise a ZeroDivisionError due to rounding errors (probably not intended by author)
     if T1 == T2:
         raise ZeroDivisionError
@@ -110,7 +110,7 @@ def compute_rsat(T, p, T1, T2, iceflag=0):
 
     """
 
-    omeg = omega(T,T1,T2)
+    omeg = omega(T, T1, T2)
     epsilon = cr['Rd']/cr['Rv']
     
     if iceflag == 0:
@@ -181,12 +181,12 @@ def compute_LCL(T, qv, p):
     b = -(cr['xlv'] - (cr['cpv'] - cr['cpl'])*cr['ttrip'])/(cr['Rv']*T)
     c = b/a
     
-    r_sat = compute_rsat(T,p,0,273.15,253.15)
+    r_sat = compute_rsat(T, p, 273.15, 253.15, 0)
     q_sat = r_sat/(1 + r_sat)
     RH = qv/q_sat
     arg1 = RH**(1/a)
     arg2 = c*np.exp(1)**c
-    arg3 = lambertw(arg1*arg2,k=-1)
+    arg3 = lambertw(arg1*arg2, k=-1)
     T_LCL = c*T/arg3
     P_LCL = p*(T_LCL/T)**(cpm/Rm)
     Z_LCL = (cpm/cr['G'])*(T - T_LCL)
@@ -196,7 +196,7 @@ def compute_LCL(T, qv, p):
 
 # using numerical integration
 # using numerical integration
-def compute_LCL_NUMERICAL(T,qv,p,dz):
+def compute_LCL_NUMERICAL(T, qv, p, dz):
 
     nfound_LCL = True
     ind_hgt = 0
@@ -205,9 +205,9 @@ def compute_LCL_NUMERICAL(T,qv,p,dz):
     Pon = p
     while nfound_LCL:
         ind_hgt = ind_hgt+1
-        Ton = Ton + dz*drylift(Ton,Qon,Ton,Qon,0)
+        Ton = Ton + dz*drylift(Ton, Qon, Ton, Qon, 0)
         Pon = Pon - dz*(Pon*cr['G'])/(cr['Rd']*(1 + (cr['Rv']/cr['Rd'] - 1)*Qon )*Ton )
-        rsat = compute_rsat(Ton,Pon,0,273.15,253.15)
+        rsat = compute_rsat(Ton, Pon, 273.15, 253.15, 0)
         qsat = rsat/(1 + rsat)
         if Qon >= qsat:
             nfound_LCL = False
@@ -259,8 +259,8 @@ def moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2):
 
     epsilon = cr['Rd']/cr['Rv']
  
-    qt = max(qt,0.0)
-    qv = max(qv,0.0)
+    qt = max(qt, 0.0)
+    qv = max(qv, 0.0)
     
     OMEGA = omega(T, T1, T2)
     dOMEGA = domega(T, T1, T2)
@@ -301,8 +301,8 @@ def moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2):
 
 
 # ----------------------------------------------------------------------------------------------------------------------------
-def lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
-    #[T_lif,Qv_lif,Qt_lif,B_lif]
+def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
+    #[T_lif, Qv_lif, Qt_lif, B_lif]
 
     #this function computes lifted parcel properties using the unsaturated
     #and saturated lapse rate formulas from (Peters et al. 2022)
@@ -351,7 +351,7 @@ def lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
     fracent : float
         Fractional entrainment rate (in m^-1)
     prate : float
-        Precipitation rate (in m^-1) large values make parcel more pseudoadiabatic,
+        Precipitation rate (in m^-1) large values make parcel more pseudoadiabatic, 
         small values make parcel more adiabatic.  I usually just set it to 0 to
         get an adiabatic parcel
     z0 : array_like
@@ -400,7 +400,7 @@ def lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
     B_run = 0
     iz=start_loc
     #
-    #for iz in np.arange(start_loc+1,z0.shape[0]):
+    #for iz in np.arange(start_loc+1, z0.shape[0]):
     #
     #
     #I REVISED THIS A BIT.  TO MAKE THE CODE FASTER, I HAVE THE CALCULATION CUT OUT WHEN THE INTEGRATED NEGATIVE BUOYANCY ("BRUN") 
@@ -411,37 +411,37 @@ def lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
     # while iz<(z0.shape[0])-1:
     while iz<(z0.shape[0])-1 and (z0[iz]<z0[mn_hgt] or (B_run+250)>0):
         iz = iz + 1
-        q_sat=(1-Qt_lif[iz-1])*compute_rsat(T_lif[iz-1],p0[iz-1],1,T1,T2)
+        q_sat=(1-Qt_lif[iz-1])*compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 1)
         if Qv_lif[iz-1]<q_sat: #if we are unsaturated, go up at the unsaturated adiabatic lapse rate (eq. 19 in Peters et al. 2022)
             
         
         
-            T_lif[iz] = T_lif[iz-1] + (z0[iz] - z0[iz-1])*drylift(T_lif[iz-1],Qv_lif[iz-1],T0[iz-1],q0[iz-1],fracent)
+            T_lif[iz] = T_lif[iz-1] + (z0[iz] - z0[iz-1])*drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
             Qv_lif[iz] = Qv_lif[iz-1] - (z0[iz] - z0[iz-1])*fracent*( Qv_lif[iz-1] - q0[iz-1] )
             Qt_lif[iz] = Qv_lif[iz]
-            q_sat=(1-Qt_lif[iz])*compute_rsat(T_lif[iz],p0[iz],1,T1,T2)
+            q_sat=(1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
             
             if Qv_lif[iz]>=q_sat: #if we hit saturation, split the vertical step into two stages.  The first stage advances at the saturated lapse rate to the saturation point, and the second stage completes the grid step at the moist lapse rate
-                OMEGA = omega(T_lif[iz-1],T1,T2)
-                dOMEGA = domega(T_lif[iz-1],T1,T2)
+                OMEGA = omega(T_lif[iz-1], T1, T2)
+                dOMEGA = domega(T_lif[iz-1], T1, T2)
                 satrat=(Qv_lif[iz]-q_sat_prev)/(q_sat-q_sat_prev)
                 dz_dry=satrat*(z0[iz]-z0[iz-1])
                 dz_wet=(1-satrat)*(z0[iz]-z0[iz-1])
 
 
                 
-                T_halfstep = T_lif[iz-1] + dz_dry*drylift(T_lif[iz-1],Qv_lif[iz-1],T0[iz-1],q0[iz-1],fracent)
+                T_halfstep = T_lif[iz-1] + dz_dry*drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
                 Qv_halfstep = Qv_lif[iz-1] - dz_dry*fracent*( Qv_lif[iz-1] - q0[iz-1] )
                 Qt_halfstep = Qv_lif[iz]
                 p_halfstep=p0[iz-1]*satrat + p0[iz]*(1-satrat)
                 T0_halfstep=T0[iz-1]*satrat + T0[iz]*(1-satrat)
                 Q0_halfstep=q0[iz-1]*satrat + q0[iz]*(1-satrat)
 
-                T_lif[iz] = T_halfstep + dz_wet*moislif(T_halfstep,Qv_halfstep,(1-Qt_halfstep)*compute_rsat(T_halfstep,p_halfstep,0,T1,T2),(1-Qt_halfstep)*compute_rsat(T_halfstep,p_halfstep,2,T1,T2),p_halfstep,T0_halfstep,Q0_halfstep,Qt_halfstep,fracent,prate,T1,T2)
+                T_lif[iz] = T_halfstep + dz_wet*moislif(T_halfstep, Qv_halfstep, (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, 2, T1, T2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
                 
                 
                 Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1])*fracent*( Qt_halfstep - Q0_halfstep )
-                Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz],p0[iz],1,T1,T2)
+                Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
 
                 if Qt_lif[iz]<Qv_lif[iz]:
                     Qv_lif[iz]=Qt_lif[iz]
@@ -449,17 +449,17 @@ def lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
             q_sat_prev = q_sat
             
         else: #if we are already at saturation, just advance upwacr['Rd'] using the saturated lapse rate (eq. 24 in Peters et al. 2022)
-            OMEGA = omega(T_lif[iz-1],T1,T2)
-            dOMEGA = domega(T_lif[iz-1],T1,T2)
+            OMEGA = omega(T_lif[iz-1], T1, T2)
+            dOMEGA = domega(T_lif[iz-1], T1, T2)
 
             T_lif[iz] = T_lif[iz-1] + (z0[iz] - z0[iz-1]) \
-                        * moislif(T_lif[iz-1],Qv_lif[iz-1],(1-Qt_lif[iz-1]) \
-                        *compute_rsat(T_lif[iz-1],p0[iz-1],0,T1,T2),(1-Qt_lif[iz-1])\
-                        *compute_rsat(T_lif[iz-1],p0[iz-1],2,T1,T2),p0[iz-1],T0[iz-1],q0[iz-1],Qt_lif[iz-1],fracent,prate,T1,T2)
+                        * moislif(T_lif[iz-1], Qv_lif[iz-1], (1-Qt_lif[iz-1]) \
+                        *compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 0), (1-Qt_lif[iz-1])\
+                        *compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 2), p0[iz-1], T0[iz-1], q0[iz-1], Qt_lif[iz-1], fracent, prate, T1, T2)
                      
              
             Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1])*(fracent*( Qt_lif[iz-1] - q0[iz-1] )  + prate*( Qt_lif[iz-1]-Qv_lif[iz-1]) )
-            Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz],p0[iz],1,T1,T2)
+            Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
             
             if Qt_lif[iz]<Qv_lif[iz]:
                 Qv_lif[iz]=Qt_lif[iz]
@@ -474,13 +474,13 @@ def lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
     B_lif=cr['G']*(T_rho_lif - T_0_lif)/T_0_lif
     
     
-    return T_lif,Qv_lif,Qt_lif,B_lif
+    return T_lif, Qv_lif, Qt_lif, B_lif
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
 
-def compute_CAPE_AND_CIN(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
-#[CAPE,CIN,LFC,EL]
+def compute_CAPE_AND_CIN(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
+#[CAPE, CIN, LFC, EL]
 
     #this function computes CAPE and CIN
     
@@ -489,7 +489,6 @@ def compute_CAPE_AND_CIN(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
     #p0: sounding profile of pressure (in Pa)
     #q0: sounding profile of water vapor mass fraction (in kg/kg)
     #start_loc: index of the parcel starting location (set to 1 for the
-    #lowest: level in the sounding)
     #fracent: fractional entrainment rate (in m^-1)
     #prate: precipitation rate (in m^-1)
     #z0: height of the profile (in m)
@@ -498,7 +497,7 @@ def compute_CAPE_AND_CIN(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
     
     
     #compute lifted parcel buoyancy
-    _, _, _, B_lif=lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2)
+    _, _, _, B_lif=lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2)
     
     if np.nanmax(B_lif)>0:
         #CAPE will be the total integrated positive buoyancy
@@ -548,21 +547,24 @@ def compute_CAPE_AND_CIN(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2):
 # compute NCAPE
 def compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL):
     
-    #COMPUTE THE MOIST STATIC ENERGY
+    if np.isnan(LFC) or np.isnan(EL):
+        return np.nan, np.nan, np.nan
+
+    # COMPUTE THE MOIST STATIC ENERGY
     MSE0 = compute_moist_static_energy(T0, q0, z0)
     
-    #COMPUTE THE SATURATED MOIST STATIC ENERGY
-    rsat = compute_rsat(T0,p0,0,T1,T2)
+    # COMPUTE THE SATURATED MOIST STATIC ENERGY
+    rsat = compute_rsat(T0, p0, T1, T2, 0)
     qsat = (1 - rsat)*rsat
     MSE0_star = compute_moist_static_energy(T0, qsat, z0)
     
-    #COMPUTE MSE0_BAR
+    # COMPUTE MSE0_BAR
     MSE0bar = np.zeros(MSE0.shape)
-    #for iz in np.arange(0,MSE0bar.shape[0],1):
+    #for iz in np.arange(0, MSE0bar.shape[0], 1):
      #   MSE0bar[iz]=np.mean(MSE0[1:iz])
         
     MSE0bar[0] = MSE0[0]
-    for iz in np.arange(1,MSE0bar.shape[0],1):
+    for iz in np.arange(1, MSE0bar.shape[0], 1):
         MSE0bar[iz] = 0.5*np.sum((MSE0[0:iz] + MSE0[1:iz+1])*(z0[1:iz+1]-z0[0:iz]))/(z0[iz]-z0[0])
     
     int_arg = - (cr['G']/(cr['cpl']*T0)) * (MSE0bar - MSE0_star)
@@ -572,12 +574,11 @@ def compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL):
     ddiff = abs(z0-EL)
     mn = np.min(ddiff)
     ind_EL = np.where(ddiff == mn)[0][0]
-    #ind_LFC=max(ind_LFC);
-    #ind_EL=max(ind_EL);
+
     
     NCAPE = np.maximum(np.nansum( (0.5*int_arg[ind_LFC:ind_EL-1] +
                                    0.5*int_arg[ind_LFC+1:ind_EL])*
-                                  (z0[ind_LFC+1:ind_EL] - z0[ind_LFC:ind_EL-1]) ),0)
+                                  (z0[ind_LFC+1:ind_EL] - z0[ind_LFC:ind_EL-1]) ), 0)
 
     return NCAPE, MSE0_star, MSE0bar
 
@@ -597,7 +598,7 @@ def compute_VSR(z0, u0, v0):
     lowx=np.mean(u0[f0500])
     lowy=np.mean(v0[f0500])
     
-    f560 = np.where(np.logical_and(z0<=6000,z0>=5500))[0]
+    f560 = np.where(np.logical_and(z0<=6000, z0>=5500))[0]
     highx=np.mean(u0[f560])
     highy=np.mean(v0[f560])
     BK_SHRx=highx-lowx
@@ -613,15 +614,15 @@ def compute_VSR(z0, u0, v0):
     SR_mean_v= v0 - meany
     dudz=np.zeros(u0.shape)
     dvdz=np.zeros(v0.shape)
-    dudz[1:dudz.shape[0]-1]= ( u0[2:dudz.shape[0]]-u0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
+    dudz[1:dudz.shape[0]-1] = (u0[2:dudz.shape[0]]-u0[0:dudz.shape[0]-2])/(z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2])
     dudz[0]=2*dudz[1]-dudz[2]
-    dvdz[1:dudz.shape[0]-1]= ( v0[2:dudz.shape[0]]-v0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
+    dvdz[1:dudz.shape[0]-1] = (v0[2:dudz.shape[0]]-v0[0:dudz.shape[0]-2])/(z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2])
     dvdz[0]=2*dvdz[1]-dvdz[2]
     f1000 = np.where(z0<=1000)[0]
     SRH_mean = abs(np.mean(-SR_mean_u[f1000]*dvdz[f1000] + SR_mean_v[f1000]*dudz[f1000])*1000.0)
     
     
-    propfac=min(SRH_mean/150,1)
+    propfac=min(SRH_mean/150, 1)
     propfac = 1
 
 
@@ -633,7 +634,7 @@ def compute_VSR(z0, u0, v0):
     
     f1000 = np.where(z0<=1000)[0]
     V_SR = np.nanmean(np.sqrt(  u_sr[f1000]**2 + v_sr[f1000]**2  ))
-    return V_SR,C_x,C_y
+    return V_SR, C_x, C_y
 
 def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
     #compute 0-1 km storm-relative flow (V_SR) using the storm motion
@@ -642,7 +643,7 @@ def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
     
     zdiff = (z0 - EL)**2
     ind_top = np.where(zdiff==np.min(zdiff))[0][0]
-    inds_avg=np.arange(0,ind_top,1)
+    inds_avg=np.arange(0, ind_top, 1)
     
     meanx = np.nanmean(B_pos[inds_avg]*rho0[inds_avg]*u0[inds_avg])/np.nanmean(B_pos[inds_avg]*rho0[inds_avg])
     meany = np.nanmean(B_pos[inds_avg]*rho0[inds_avg]*v0[inds_avg])/np.nanmean(B_pos[inds_avg]*rho0[inds_avg])
@@ -658,7 +659,7 @@ def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
     lowx=np.mean(u0[f0500])
     lowy=np.mean(v0[f0500])
     
-    f560 = np.where(np.logical_and(z0<=6000,z0>=5500))[0]
+    f560 = np.where(np.logical_and(z0<=6000, z0>=5500))[0]
     highx=np.mean(u0[f560])
     highy=np.mean(v0[f560])
     BK_SHRx=highx-lowx
@@ -682,7 +683,7 @@ def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
     SRH_mean = abs(np.mean(-SR_mean_u[f1000]*dvdz[f1000] + SR_mean_v[f1000]*dudz[f1000])*1000.0)
     
     
-    propfac=min(SRH_mean/150,1)
+    propfac=min(SRH_mean/150, 1)
 
 
     C_x=meanx+propfac*BK_orthx
@@ -698,10 +699,12 @@ def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
-def compute_ETILDE(CAPE,NCAPE,V_SR,EL,L):
+def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L):
+
+    if np.isnan(CAPE) or np.isnan(NCAPE) or np.isnan(V_SR) or np.isnan(EL) or np.isnan(L):
+        return np.nan, np.nan, np.nan
     #THESE ARE A BUNCH OF CONSTANT PARAMTERS SET FOR THE ECAPE CALCULATION
     H=EL
-    l=L/H
     sigma = 1.1
     alpha=0.8
     Pr=1/3 #PRANDTL NUMBER
@@ -731,12 +734,12 @@ def compute_ETILDE(CAPE,NCAPE,V_SR,EL,L):
     #varepsilon = 0.65*eps*(alpha**2)*(np.pi**2)*E_tilde/(4*(sigma**2)*EL*(vsr_tilde**2 ) ) #THIS IS THE FRACTIONAL ENTRAINMENT RATE
     Radius = np.sqrt(2*ksq*L/(Pr*varepsilon))
 
-    return E_tilde,varepsilon,Radius
+    return E_tilde, varepsilon, Radius
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
 
-def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
+def CI_model(T0, p0, q0, z0, u0, v0, T1, T2, radrng, itmax, L, prate_global):
     
     #THIS FUNCTION EXECUTES THE "PROGRESSIVE ROOTING" TOY MODEL DESCRIBED BY PETERS ET AL. 2022A
     #https://journals.ametsoc.org/view/journals/atsc/79/6/JAS-D-21-0145.1.xml
@@ -756,7 +759,7 @@ def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
         #T2, temperature at which freezing ends in the parcel calculation (K).  This will control the temperature
             #range over which mixed-phase occurs.  I usually set to 253.15 k
         #radrng, a vector containing the initial radii we are going to test.  A reasonable
-            #choice here is a range from 100 m to 6000 m at intecr['Rv']als of 100 m (np.arange(100,6000,100))
+            #choice here is a range from 100 m to 6000 m at intecr['Rv']als of 100 m (np.arange(100, 6000, 100))
         #itmax, the number of iterations (I usually set to 20)
         #L, the mixing length (I usually set to 250 m)
         #prate_global, the precipitation loss inverse length scale (km^(-1)).  Larger values make the
@@ -791,13 +794,13 @@ def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
     rho0 = p0/(cr['Rd']*T0*(1 + (cr['Rv']/cr['Rd'] - 1)*q0))
 
     #TIME SERIES OF QUANTITIES OUTPUTTED FROM THE CI MODEL
-    R_TS = np.zeros((radrng.shape[0],itmax)) #RADIUS OF THE UPDRAFT
-    H_TS = np.zeros((radrng.shape[0],itmax)) #EL HEIGHT
-    W_TS = np.zeros((radrng.shape[0],itmax)) #MAX VERTICAL VELOCITY
-    VSR_TS = np.zeros((radrng.shape[0],itmax)) #STORM-RELATIVE FLOW
+    R_TS = np.zeros((radrng.shape[0], itmax)) #RADIUS OF THE UPDRAFT
+    H_TS = np.zeros((radrng.shape[0], itmax)) #EL HEIGHT
+    W_TS = np.zeros((radrng.shape[0], itmax)) #MAX VERTICAL VELOCITY
+    VSR_TS = np.zeros((radrng.shape[0], itmax)) #STORM-RELATIVE FLOW
     
     #INITIAL CONDITION ON RADIUS: SET TO R0
-    R_TS[:,0]=radrng 
+    R_TS[:, 0]=radrng 
     
     
     #dudz=np.zeros(u0.shape)
@@ -809,12 +812,12 @@ def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
     #SHR_mag = np.sqrt(dudz**2 + dvdz**2)
     
     #IN THE FUTRE, WE'LL PROBABLY WANT TO COMPUTE THE DENSITY WEIGHTED STORM-RELATIVE FLOW, LIKE IN THE ECAPE THEORY
-    #UDCAPE,UDCIN,UDLFC,UDEL=compute_CAPE_AND_CIN(T0,p0,q0,start_loc,0,prate_global,z0,T1,T2)
+    #UDCAPE, UDCIN, UDLFC, UDEL=compute_CAPE_AND_CIN(T0, p0, q0, start_loc, 0, prate_global, z0, T1, T2)
 
     #PARAMETERS FOR CI MODEL
-    for it in np.arange(0,itmax-1,1): #LOOP THROUGH THE SPECIFIED NUMBER OF ITERATIONS
-        for ir in np.arange(0,radrng.shape[0],1): #LOOP THROUGH EACH OF THE STARTING RADII
-            R_on = R_TS[ir,it] #STORE THE RADIUS (IN M)
+    for it in np.arange(0, itmax-1, 1): #LOOP THROUGH THE SPECIFIED NUMBER OF ITERATIONS
+        for ir in np.arange(0, radrng.shape[0], 1): #LOOP THROUGH EACH OF THE STARTING RADII
+            R_on = R_TS[ir, it] #STORE THE RADIUS (IN M)
             #
             fracent = 2*ksq*L/(Pr*(R_on**2)) #USE RADIUS TO COMPUTE FRACTION ENTRAINMENT RATE WITH EQ. XX IN XX
             
@@ -827,23 +830,23 @@ def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
                 V_SR = 20*R_on/5000 #5.0  
             else:
                 #AT LATER TIMES, WE JUST USE THE STORM RELATIVE FLOW FROM THE PREVIOUS TIME STEP
-                V_SR = VSR_TS[ir,it-1]
+                V_SR = VSR_TS[ir, it-1]
                     
             #GET THE MAXIMUM VERTICAL VELOCITY PROFILE FOR A RISING CLOUD THERMAL
-            CAPE,LFC,EL,B_pos=compute_w(T0,p0,q0,start_loc,fracent,prate_global,z0,T1,T2,R_on,u0,v0,V_SR)
+            CAPE, LFC, EL, B_pos=compute_w(T0, p0, q0, start_loc, fracent, prate_global, z0, T1, T2, R_on, u0, v0, V_SR)
             #NOW THE VERTICAL VELOCITY AT THE BASE OF THE THERMAL, WHICH WILL EXPERIENCE A HIGHER ENTRAINMENT RATE
-            CAPE2,LFC2,EL2,null=compute_w(T0,p0,q0,start_loc,fracent*9/4,prate_global,z0,T1,T2,R_on,u0,v0,V_SR)
+            CAPE2, LFC2, EL2, null=compute_w(T0, p0, q0, start_loc, fracent*9/4, prate_global, z0, T1, T2, R_on, u0, v0, V_SR)
             
             #WE WILL NEED THE PROFILE OF POSITIVE BUOYANCY TO ESTIMATE STORM MOTION LATER.  
             #ZERO OUT THE NEGATIVE BUOYANCY
-            B_pos = np.maximum(B_pos,0)
+            B_pos = np.maximum(B_pos, 0)
 
             #IF WE ACTUALLY HAVE ANY POSITIVE BUOYANCY, WE'LL ADVANCE THE MODEL
             if ~np.isnan(EL):
                 
                 #GET THE 0-1 KM STORM-RELATIVE FLOW
-                V_SR = compute_VSR_DIFF(z0,u0,v0,rho0,EL,B_pos)
-                #V_SR = compute_VSR(z0,u0,v0)
+                V_SR = compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos)
+                #V_SR = compute_VSR(z0, u0, v0)
                      
                 #ADVANCE TO THE NEXT RADIUS USING EQ XX IN XX
                 R_next = 1.7*( (EL2/EL)**2 )*2*V_SR*(EL-LFC)*sig/(np.pi*alpha*np.sqrt(2*CAPE))
@@ -856,18 +859,18 @@ def CI_model(T0,p0,q0,z0,u0,v0,T1,T2,radrng,itmax,L,prate_global):
                 R_next = 0
                 
             #STORE TIME SERIES'
-            R_TS[ir,it+1] = R_next
-            H_TS[ir,it]=EL
-            W_TS[ir,it]=np.sqrt(2*CAPE)
-            VSR_TS[ir,it]=V_SR
+            R_TS[ir, it+1] = R_next
+            H_TS[ir, it]=EL
+            W_TS[ir, it]=np.sqrt(2*CAPE)
+            VSR_TS[ir, it]=V_SR
         R_TS[np.where(np.isnan(R_TS))]=0
     
-    return R_TS,H_TS,W_TS,VSR_TS
+    return R_TS, H_TS, W_TS, VSR_TS
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
-def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
-    #[CAPE,CIN,LFC,EL]
+def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0, V_SR):
+    #[CAPE, CIN, LFC, EL]
 
     #this function computes CAPE and CIN
     
@@ -990,8 +993,8 @@ def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
 
     return CAPE, LFC, EL, B_pos
 
-def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
-#[CAPE,CIN,LFC,EL]
+def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0, V_SR):
+#[CAPE, CIN, LFC, EL]
 
     #this function computes CAPE and CIN
     
@@ -1018,11 +1021,11 @@ def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
     S = np.sqrt(dudz**2 + dvdz**2)                                            
     
     #COMPUTE THE LIFTED PARCEL BUOYANCY
-    _,Qv_lif,Qt_lif,B_lif=lift_parcel_adiabatic(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2)
+    _, Qv_lif, Qt_lif, B_lif=lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2)
     
     #CALCULATE THE LIFTED CONDENSATION LEVEL
     qdiff = abs(Qt_lif - Qv_lif) #FIGURE OUT THE FIRST HEIGHT WHERE QV STARTS DEVIATING FROM QT, IMPLYING CONDENSATION
-    if np.logical_and(~np.isnan(qdiff[1]),np.nanmax(qdiff)>0):
+    if np.logical_and(~np.isnan(qdiff[1]), np.nanmax(qdiff)>0):
         lcl_ind = np.where(qdiff>0)[0][0]
         LCL = z0[lcl_ind]
     else:
@@ -1070,7 +1073,7 @@ def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
         WSQ_prof = np.zeros(B_pos.shape[0])
         WSQ_prof[start_loc]=(V_SR**2)/2 #LOWER BOUNADRY CONDITION ON VERTICAL KE IS THE KE OF INFLOW
         uprime_prof = np.zeros(B_pos.shape[0]) #INITIALIZE UPRIME PROFILE
-        for iz in np.arange(0,WSQ_prof.shape[0]-1,1): #VERTICALLY INTEGRATE
+        for iz in np.arange(0, WSQ_prof.shape[0]-1, 1): #VERTICALLY INTEGRATE
             B_on = B_pos[iz] #STORE THE CURRENT BUOYANCY
             ebuoy_fac = 1/(1 + 2*(alpha**2)*(Radius**2)/((EL-LFC)**2 ) ) #SCALE FACTOR THAT ACCOUNTS FOR EFFECITVE BUOYANCY
             #ns_drag = -2.5*c_d*(3/8)/Radius #COEFICIENT ON THE NON-SHEARED PART OF DRAG
@@ -1105,4 +1108,4 @@ def compute_w(T0,p0,q0,start_loc,fracent,prate,z0,T1,T2,Radius,u0,v0,V_SR):
         B_pos = np.zeros(T0.shape)
         
 
-    return CAPE,LFC,EL,B_pos
+    return CAPE, LFC, EL, B_pos
