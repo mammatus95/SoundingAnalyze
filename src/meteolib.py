@@ -36,9 +36,9 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'Pi': math.pi,                           # Pi
       'e': 2.71828,                            # Euler Zahl
       'Pas2hPah': 36,                          # Pa/s to hPa/h
-      'ksq': 0.18,                             # VON KARMAN CONSTANT
-      'Pr': 1/3,                               # PRANDTL NUMBER
-      'Lm': 250,                               # HORIZONTAL MIXING LENGTH
+      'ksq': 0.18,                             # von Karman constant
+      'Pr': 1/3,                               # Prandtl number
+      'Lm': 250,                               # horizontal mixing Length
       'c1': 0.0498646455,
       'c2': 2.4082965,
       'c3': 7.07475,

@@ -28,3 +28,7 @@ python3 run_cm1.py
 ![Hodograph](images/10184wind.png)
 
 ![Historical](images/hist_500.png)
+
+**ECAPE**
+
+![ECAPE](images/ecape.png)

@@ -16,7 +16,7 @@ import numpy as np
 from src.utilitylib import station_number2string
 import src.meteolib as meteolib
 from src.skewT import SkewXAxes
-
+from src.meteolib import cr
 # ---------------------------------------------------------------------------------------------------------------------
 
 def add_adiabatic(ax, pmax=1000, pmin=100, dp=-10):
@@ -65,25 +65,36 @@ def create_stuve():
     plt.ylabel("Druck [hPa]")
     return fig, ax
 
-def plot_stuve_cm1(t_env, td_env, pres_env):
+def plot_stuve_cm1(t_env, td_env, pres_env, T_lift, Qv_lift, Qt_lift, T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape):
     _, ax = create_stuve()
 
     ax = add_adiabatic(ax)
 
     # plot souding datas
+    ax.plot(t_env, pres_env/100, '-b', lw=1.5, label="Temperature")
+    ax.plot(td_env, pres_env/100, '-g', lw=1.5, label="Dewpoint")
 
-    ax.plot(t_env, pres_env, '-b', lw=1.5)
-    ax.plot(td_env, pres_env, '-g', lw=1.5)
+    # plot lifted parcel
+    T_rho = T_lift*(1 + (cr['Rv']/cr['Rd'])*Qv_lift - Qt_lift)
+    T_rho = T_rho - cr['ZEROCNK']
+    ax.plot(T_rho, pres_env/100, 'r--', linewidth=2, label="CAPE Parcel")
+
+    # plot lifted parcel
+    T_rho = T_lif_ecape*(1 + (cr['Rv']/cr['Rd'])*Qv_lif_ecape - Qt_lif_ecape)
+    T_rho = T_rho - cr['ZEROCNK']
+    ax.plot(T_rho, pres_env/100, 'm--', linewidth=2, label="ECAPE Parcel")
 
     plt.yscale('log')
 
     ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     ax.set_yticks(np.linspace(100, 1000, 10))
-    ax.set_ylim(1050, 100)
-    ax.set_xticks(np.arange(-90, 50, 10))
-    ax.set_xlim(-90, 50)
+    ax.set_ylim(1020, 100)
+    ax.set_xticks(np.arange(-80, 40, 10))
+    ax.set_xlim(-80, 40)
 
-    plt.savefig(f"test.png")
+    plt.legend()
+
+    plt.savefig(f"ecape.png")
     plt.close()
 
 def plot_stuve(station_sounding_obj, number_str):

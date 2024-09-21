@@ -707,9 +707,7 @@ def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L):
     H=EL
     sigma = 1.1
     alpha=0.8
-    Pr=1/3 #PRANDTL NUMBER
-    ksq=0.18 #VON KARMAN CONSTANT
-    pitchfork=ksq*(alpha**2)*(np.pi**2)*L/(4*Pr*(sigma**2)*H)
+    pitchfork = cr['ksq']*(alpha**2)*(np.pi**2)*L/(4*cr['Pr']*(sigma**2)*H)
     vsr_tilde = V_SR/np.sqrt(2*CAPE)
     N_tilde = NCAPE/CAPE
     
@@ -723,16 +721,19 @@ def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L):
     varepsilon = 2*((1 - E_tilde_)/(E_tilde_ + N_tilde))/(EL)  
     
 
-    #eps = 2*ksq*L/(EL*Pr)
+    #eps = 2*cr['ksq']*L/(EL*cr['Pr'])
     
     #Rm2 = ( (alpha*np.pi/(sigma) )**2 )*( E_tilde/vsr_tilde + 1)
     #Radius =  EL*Rm2**(-1/2)
-    #varepsilon = 2*ksq*L/(Pr*Radius**2 )
+    #varepsilon = 2*cr['ksq']*L/(cr['Pr']*Radius**2 )
     
     #Radius=Radius/2
     
-    #varepsilon = 0.65*eps*(alpha**2)*(np.pi**2)*E_tilde/(4*(sigma**2)*EL*(vsr_tilde**2 ) ) #THIS IS THE FRACTIONAL ENTRAINMENT RATE
-    Radius = np.sqrt(2*ksq*L/(Pr*varepsilon))
+    # Fractional Entrainment Rate
+    #varepsilon = 0.65*eps*(alpha**2)*(np.pi**2)*E_tilde/(4*(sigma**2)*EL*(vsr_tilde**2 ) )
+
+    # Radius
+    Radius = np.sqrt(2*cr['ksq']*L/(cr['Pr']*varepsilon))
 
     return E_tilde, varepsilon, Radius
 
@@ -782,13 +783,11 @@ def CI_model(T0, p0, q0, z0, u0, v0, T1, T2, radrng, itmax, L, prate_global):
     cr['ttrip']=273.15 #TRIPLE POINT TEMPERATURE
     
 
-    #PARAMTERS UNIQUE TO THE CI MODEL
-    alpha=0.8 #ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
-    Pr=1/3 #PRANDTL NUMBER
-    ksq=0.18 #VON KARMAN CONSTANT
-    start_loc = 0 #STARTING HEIGHT OF THE AIR PARCEL WE ARE LIFTING
-    sig = 0.5 #RATIO OF THE HEIGHT OF WMAX TO EQUILBIRIUM LEVEL HEIGHT (SHOULD PROBABLY SET THIS TO 1)
-    rfac = 1/4 #RELAXATION FACTOR FOR MODEL INTEGRATION.  SMALLER VALUE GIVES A SMOOTHER SOLUTION
+    # Paramters unique to the ci model
+    alpha=0.8      # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
+    start_loc = 0  # STARTING HEIGHT OF THE AIR PARCEL WE ARE LIFTING
+    sig = 0.5      # RATIO OF THE HEIGHT OF WMAX TO EQUILBIRIUM LEVEL HEIGHT (SHOULD PROBABLY SET THIS TO 1)
+    rfac = 1/4     # RELAXATION FACTOR FOR MODEL INTEGRATION.  SMALLER VALUE GIVES A SMOOTHER SOLUTION
     
     #WE WILL NEED THE DENSITY PROFILE TO COMPUTE THE STORM-RELATIVE WIND LATER
     rho0 = p0/(cr['Rd']*T0*(1 + (cr['Rv']/cr['Rd'] - 1)*q0))
@@ -819,7 +818,7 @@ def CI_model(T0, p0, q0, z0, u0, v0, T1, T2, radrng, itmax, L, prate_global):
         for ir in np.arange(0, radrng.shape[0], 1): #LOOP THROUGH EACH OF THE STARTING RADII
             R_on = R_TS[ir, it] #STORE THE RADIUS (IN M)
             #
-            fracent = 2*ksq*L/(Pr*(R_on**2)) #USE RADIUS TO COMPUTE FRACTION ENTRAINMENT RATE WITH EQ. XX IN XX
+            fracent = 2*cr['ksq']*L/(cr['Pr']*(R_on**2)) #USE RADIUS TO COMPUTE FRACTION ENTRAINMENT RATE WITH EQ. XX IN XX
             
             #WHEN COMPUTING THE VERTICAL PROFILE OF KINETIC ENERGY, THE LOWER BOUNDARY CONDITION IS THAT A PARCEL
             #BEGINS WITH THE KINETIC ENERGY OF THE INFLOW.  THIS MEANS WE HAVE TO GIVE THE VERTICAl VELOCITY
@@ -898,7 +897,7 @@ def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0,
     dvdz[0 : dudz.shape[0] - 1] = (v0[1 : dudz.shape[0]] - v0[0 : dudz.shape[0] - 1]) / dz[0 : dudz.shape[0] - 1]
     S = np.sqrt(dudz**2 + dvdz**2)
 
-    # COMPUTE THE LIFTED PARCEL BUOYANCY
+    # Compute the lifted parcel buoyancy
     _, Qv_lif, Qt_lif, B_lif = lift_parcel_adiabatic(
         T0, p0, q0, start_loc, fracent, prate, z0, T1, T2
     )

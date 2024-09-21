@@ -39,10 +39,7 @@ def main():
 
     T0 = calculate_temperature(pres, Th)
 
-    TD0 = temp_at_mixrat(r_v*1000, T0) # degree C
-
-    plot_stuve_cm1(T0 - cr['ZEROCNK'], TD0, pres)
-
+    TD0 = temp_at_mixrat(r_v*1000, pres/100) # degree C
 
     T1 = 273.15
     T2 = 253.15
@@ -55,6 +52,7 @@ def main():
 
     # GET THE SURFACE-BASED CAPE, CIN, LFC, EL
     CAPE, CIN, LFC, EL = compute_CAPE_AND_CIN(T0, p0, q0, 0, 0, 0, z0, T1, T2)
+    print(f"CAPE: {CAPE} CIN: {CIN} LFC: {LFC} EL: {EL}")
     
     # GET NCAPE, WHICH IS NEEDED FOR ECAPE CALULATION
     NCAPE, MSE0_star, MSE0bar = compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL)
@@ -74,10 +72,16 @@ def main():
     
     fracent=varepsilon
     #prate=3e-5
-    T_lif, Qv_lif, Qt_lif, B_lif = lift_parcel_adiabatic(T0, p0, q0, 0, fracent, 0, z0, T1, T2)
     ECAPE, ECIN, ELFC, EEL = compute_CAPE_AND_CIN(T0, p0, q0, 0, fracent, 0, z0, T1, T2)
+    print(f"ECAPE: {ECAPE} ECIN: {ECIN} ELFC: {ELFC} EEL: {EEL}")
 
     print(f"CAPE: {CAPE} WCAPE: {WCAPE} NCAPE: {NCAPE} E_tilde: {E_tilde} ECAPE: {ECAPE}")
+
+    # calculate parcel trajectories for plotting
+    T_lif, Qv_lif, Qt_lif, _ = lift_parcel_adiabatic(T0, p0, q0, 0, 0, 0, z0, T1, T2)
+    T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape, _ = lift_parcel_adiabatic(T0, p0, q0, 0, fracent, 0, z0, T1, T2)
+
+    plot_stuve_cm1(T0 - cr['ZEROCNK'], TD0, pres, T_lif, Qv_lif, Qt_lif, T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape)
 
 if __name__ == '__main__':
     print("Running ECAPE")
