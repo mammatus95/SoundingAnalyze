@@ -437,7 +437,7 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
                 T0_halfstep=T0[iz-1]*satrat + T0[iz]*(1-satrat)
                 Q0_halfstep=q0[iz-1]*satrat + q0[iz]*(1-satrat)
 
-                T_lif[iz] = T_halfstep + dz_wet*moislif(T_halfstep, Qv_halfstep, (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, 2, T1, T2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
+                T_lif[iz] = T_halfstep + dz_wet*moislif(T_halfstep, Qv_halfstep, (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
                 
                 
                 Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1])*fracent*( Qt_halfstep - Q0_halfstep )

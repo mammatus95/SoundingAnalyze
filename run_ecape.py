@@ -8,24 +8,28 @@ import numpy as np
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
-from src.meteolib import cr
+from src.meteolib import cr, temp_at_mixrat
 from src.cm1_lib import read_modelsounding, interpolating_sounding, calculate_density_potential_temperature
 from src.cm1_lib import calculate_PII, calculate_pressure, calculate_temperature_density, calculate_density, calculate_temperature
 from src.ecape_lib import CI_model, compute_CAPE_AND_CIN, compute_w, compute_NCAPE, compute_VSR, compute_ETILDE
 from src.ecape_lib import lift_parcel_adiabatic
+from src.plotlib import plot_stuve_cm1
+
 # ----------------------------------------------------------------------------------------------------------------------------
 
 
 def main():
 
     sound_filename = 'src/example/sounding_base.txt'
+    #sound_filename = 'src/example/sounding_noshear.txt'
+
     Z, Th, r_v, u, v, p_sfc = read_modelsounding(sound_filename)
     Z, Th, r_v, u, v = interpolating_sounding(Z, Th, r_v, u, v)
 
 
     Th_rho = calculate_density_potential_temperature(Th, r_v)
 
-    PII = calculate_PII(Z, Th_rho, p_sfc)
+    PII = calculate_PII(Z, Th_rho, p_sfc*100.0)
 
     pres = calculate_pressure(PII)
 
@@ -35,8 +39,15 @@ def main():
 
     T0 = calculate_temperature(pres, Th)
 
+    TD0 = temp_at_mixrat(r_v*1000, T0) # degree C
+
+    plot_stuve_cm1(T0 - cr['ZEROCNK'], TD0, pres)
+
+
     T1 = 273.15
     T2 = 253.15
+
+
 
     q0 = (1 - r_v)*r_v
     p0 = pres
@@ -66,7 +77,7 @@ def main():
     T_lif, Qv_lif, Qt_lif, B_lif = lift_parcel_adiabatic(T0, p0, q0, 0, fracent, 0, z0, T1, T2)
     ECAPE, ECIN, ELFC, EEL = compute_CAPE_AND_CIN(T0, p0, q0, 0, fracent, 0, z0, T1, T2)
 
-    print(f"WCAPE: {WCAPE} NCAPE: {NCAPE} E_tilde: {E_tilde} ECAPE: {ECAPE} CAPE: {CAPE}")
+    print(f"CAPE: {CAPE} WCAPE: {WCAPE} NCAPE: {NCAPE} E_tilde: {E_tilde} ECAPE: {ECAPE}")
 
 if __name__ == '__main__':
     print("Running ECAPE")

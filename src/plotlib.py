@@ -65,6 +65,26 @@ def create_stuve():
     plt.ylabel("Druck [hPa]")
     return fig, ax
 
+def plot_stuve_cm1(t_env, td_env, pres_env):
+    _, ax = create_stuve()
+
+    ax = add_adiabatic(ax)
+
+    # plot souding datas
+
+    ax.plot(t_env, pres_env, '-b', lw=1.5)
+    ax.plot(td_env, pres_env, '-g', lw=1.5)
+
+    plt.yscale('log')
+
+    ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax.set_yticks(np.linspace(100, 1000, 10))
+    ax.set_ylim(1050, 100)
+    ax.set_xticks(np.arange(-90, 50, 10))
+    ax.set_xlim(-90, 50)
+
+    plt.savefig(f"test.png")
+    plt.close()
 
 def plot_stuve(station_sounding_obj, number_str):
     _, ax = create_stuve()
@@ -109,7 +129,7 @@ def plot_stuve(station_sounding_obj, number_str):
              length=8, pivot='middle', barb_increments=dict(half=2.5, full=5, flag=25))
 
     ax.set_title(f"{station_number2string(number_str)}", fontsize=18)
-    plt.savefig(f"{station_number2string(number_str)}_thermo.png")
+    plt.savefig(f"{station_number2string(number_str)}_stuve.png")
     plt.close()
 
 # ---------------------------------------------------------------------------------------------------------------------

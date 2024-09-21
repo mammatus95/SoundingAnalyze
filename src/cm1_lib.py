@@ -50,7 +50,7 @@ def read_modelsounding(filename='input_sounding'):
             if data_ctr == 1: # get surface data from first line
                 p_sfc = float(dataon[1])/100.0 
                 Th_sfc = float(dataon[2])
-                r_sfc = float(dataon[3])/1000.0
+                r_sfc = float(dataon[3])
                 Z.append(0.0)
                 Th.append(Th_sfc)
                 r_v.append(r_sfc)
@@ -120,7 +120,7 @@ def calculate_density(pres, T_rho):
 # ----------------------------------------------------------------------------------------------------------------------------
 
 def main():
-    sound_filename = 'example/sounding.txt'
+    sound_filename = 'example/sounding_base.txt'
     Z, Th, r_v, u, v = read_modelsounding(sound_filename)
     print(Z.size, Th.size, r_v.size, u.size, v.size)
 
