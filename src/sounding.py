@@ -5,6 +5,8 @@ import src.meteolib as meteolib
 from src.readhtml_bufr import readhtml2numpy
 from src.utilitylib import load_yaml
 from src.cm1_lib import read_cm1sounding
+from src.ecape_lib import compute_CAPE_AND_CIN, compute_NCAPE, compute_VSR, compute_ETILDE, lift_parcel_adiabatic
+
 # ---------------------------------------------------------------------------------------------------------------------
 
 
@@ -37,34 +39,34 @@ class sounding():
             self.dew_env += meteolib.cr['ZEROCNK']
 
             self.agl = np.subtract(self.height, self.height[0])
-            self.q_env = meteolib.mixrat_to_q(self.mr_env)
-            self.tvir_env = meteolib.virtuelle(self.q_env, self.t_env)
+            self.qv_env = meteolib.mixrat_to_q(self.mr_env)
+            self.tvir_env = meteolib.virtuelle(self.qv_env, self.t_env)
             self.theta_env = meteolib.theta(self.pres_env, self.t_env, p0=1000.)
-            self.thetae_env = meteolib.thetae(self.pres_env, self.t_env, self.q_env, p0=1000.)
+            self.thetae_env = meteolib.thetae(self.pres_env, self.t_env, self.qv_env, p0=1000.)
             self.wetbulb_env = self._calc_wetbulb()
 
             # kinematic transformations
             self.u_env, self.v_env = meteolib.uvwind(winddir, self.wind_speed)
 
         elif ".txt" in inputstring or ".csv" in inputstring:
-            self.pres_env, self.height, self.theta_env, self.mr_env, self.u_env, self.v_env = read_cm1sounding(inputstring)
+            self.pres_env, self.height, self.theta_env, self.qv_env, self.u_env, self.v_env = read_cm1sounding(inputstring)
             
             index_array = np.where(self.pres_env > config["pmin"])
-            self.pres_env = self.pres_env[index_array]
+            self.pres_env = self.pres_env[index_array]/100
             self.height = self.height[index_array]
             self.theta_env = self.theta_env[index_array]
-            self.mr_env = self.mr_env[index_array]
+            self.qv_env = self.qv_env[index_array]
             self.u_env = self.u_env[index_array]
             self.v_env = self.v_env[index_array]
 
             self.agl = np.subtract(self.height, self.height[0])
             self.t_env = meteolib.thetas(self.theta_env, self.pres_env, p0=1000.)
+            self.mr_env = meteolib.q_to_mixrat(self.qv_env)
             self.dew_env = meteolib.temp_at_mixrat(self.mr_env*1000, self.pres_env) + meteolib.cr['ZEROCNK']
-
-            self.q_env = meteolib.mixrat_to_q(self.mr_env)
-            self.tvir_env = meteolib.virtuelle(self.q_env, self.t_env)
+            
+            self.tvir_env = meteolib.virtuelle(self.qv_env, self.t_env)
             #self.theta_env = meteolib.theta(self.pres_env, self.t_env, p0=1000.)
-            self.thetae_env = meteolib.thetae(self.pres_env, self.t_env, self.q_env, p0=1000.)
+            self.thetae_env = meteolib.thetae(self.pres_env, self.t_env, self.qv_env, p0=1000.)
             self.wetbulb_env = self._calc_wetbulb()
 
             # kinematic transformations
@@ -91,8 +93,24 @@ class sounding():
 
         # strom relative
 
-        # sb cape
+        # Bouyancy
+        # SB CAPE
         self.SB_CAPE, self.SB_CIN, self.SB_LFC, self.SB_EL, self.SB_parcel = self._compute_lift_parcel(0, self.pres_env[0], self.t_env[0], self.dew_env[0])
+
+        # ECAPE
+        T1 = 273.15
+        T2 = 253.15
+
+        self._CAPE, self._CIN, self._LFC, self._EL = compute_CAPE_AND_CIN(self.t_env, self.pres_env*100, self.qv_env, 0, 0, 0, self.height, T1, T2)
+        
+        self.NCAPE, _, _ = compute_NCAPE(self.t_env, self.pres_env*100, self.qv_env, self.height, T1, T2, self._LFC, self._EL)
+
+        V_SR, _, _ = compute_VSR(self.height, self.u_env, self.v_env)
+        _, self.varepsilon, _ = compute_ETILDE(self._CAPE, self.NCAPE, V_SR, self._EL, 250)
+
+        self.ECAPE, self.ECIN, self.ELFC, self.EEL = compute_CAPE_AND_CIN(self.t_env, self.pres_env*100, self.qv_env, 0, self.varepsilon, 0, self.height, T1, T2)
+        T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape, _ = lift_parcel_adiabatic(self.t_env, self.pres_env*100, self.qv_env, 0, self.varepsilon, 0, self.height, T1, T2)
+        self.ECAPE_parcel = T_lif_ecape*(1 + (meteolib.cr['Rv']/meteolib.cr['Rd'])*Qv_lif_ecape - Qt_lif_ecape)
 
         # WMAXSHEAR
         self.WMAXSHEAR = np.sqrt(2*self.SB_CAPE) * self.bulk_shear0_6km

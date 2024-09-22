@@ -2,7 +2,6 @@
 import unittest
 import numpy as np
 # project modul
-from src.meteolib import q_to_mixrat
 from src.cm1_lib import read_modelsounding, interpolating_sounding, calculate_density_potential_temperature
 from src.cm1_lib import calculate_PII, calculate_pressure, calculate_temperature_density, calculate_temperature
 from src.ecape_lib import compute_CAPE_AND_CIN, compute_NCAPE, compute_VSR, compute_ETILDE

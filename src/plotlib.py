@@ -113,11 +113,17 @@ def plot_stuve(station_sounding_obj, number_str):
 
     t_parcel = station_sounding_obj.SB_parcel - meteolib.cr['ZEROCNK']
 
-    ax.plot(t_parcel, pres_env, '-r', lw=1.8)
+    ax.plot(t_parcel, pres_env, '-r', lw=1.8, label="SB CAPE Parcel")
 
     if station_sounding_obj.SB_CAPE > 10:
         ax.fill_betweenx(pres_env, tvir_env, t_parcel, where=t_parcel >= tvir_env, facecolor='red', alpha=0.4)
 
+    t_parcel = station_sounding_obj.ECAPE_parcel - meteolib.cr['ZEROCNK']
+
+    ax.plot(t_parcel, pres_env, 'm--', linewidth=2, label="ECAPE Parcel")
+    if station_sounding_obj.ECAPE > 10:
+        ax.fill_betweenx(pres_env, tvir_env, t_parcel, where=t_parcel >= tvir_env, facecolor='red', alpha=0.2)
+    
     plt.yscale('log')
 
     ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
@@ -140,6 +146,7 @@ def plot_stuve(station_sounding_obj, number_str):
              length=8, pivot='middle', barb_increments=dict(half=2.5, full=5, flag=25))
 
     ax.set_title(f"{station_number2string(number_str)}", fontsize=18)
+    plt.legend()
     plt.savefig(f"{station_number2string(number_str)}_stuve.png")
     plt.close()
 
@@ -207,6 +214,11 @@ def plot_skewT(station_sounding_obj, number_str):
     t_parcel = station_sounding_obj.SB_parcel - meteolib.cr['ZEROCNK']
     ax.semilogy(t_parcel, pres_env, '-r', lw=1.4)
     ax.fill_betweenx(pres_env, tvir_env, t_parcel,  where=t_parcel > tvir_env, facecolor='red', interpolate=True, alpha=0.4)
+
+    t_parcel = station_sounding_obj.ECAPE_parcel - meteolib.cr['ZEROCNK']
+
+    ax.semilogy(t_parcel, pres_env, 'm--', linewidth=2, label="ECAPE Parcel")
+    ax.fill_betweenx(pres_env, tvir_env, t_parcel, where=t_parcel >= tvir_env, facecolor='red', alpha=0.2)
 
     # Disables the log-formatting that comes with semilogy
     ax.yaxis.set_major_formatter(plt.ScalarFormatter())
@@ -296,6 +308,8 @@ def plot_skewT(station_sounding_obj, number_str):
 
     #fig.text(x_value, 0.30, "ML CAPE : %.1f J/kg" % (2843.2))
     fig.text(x_value, 0.27, "SB CAPE : %.1f J/kg" % (station_sounding_obj.get_sb_cape()))
+    fig.text(x_value, 0.24, "ECAPE   : %.1f J/kg" % (station_sounding_obj.ECAPE))
+
     #fig.text(x_value, 0.24, "BRN ML : %.1f" % (brn))
     wmaxshr = station_sounding_obj.get_wmaxshear()
     if (wmaxshr >= 1000.0):

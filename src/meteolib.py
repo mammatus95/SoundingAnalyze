@@ -332,8 +332,6 @@ def uvwind(winddir, wind_speed):
 
 
 def uv2spddir(u, v):
-    
-
     direction = np.rad2deg(np.arctan2(-u, -v))
     if isinstance(direction, np.ndarray):
         direction = np.remainder(direction + 360, 360)
