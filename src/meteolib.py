@@ -95,6 +95,7 @@ def temp_at_mixrat(w, p):
     -------
     Temperature (C) of air at given mixing ratio and pressure
     '''
+
     x = np.log10(w * p / (622. + w))
     x = (np.power(10., ((cr['c1'] * x) + cr['c2'])) - cr['c3'] +
          (cr['c4'] * np.power((np.power(10, (cr['c5'] * x)) - cr['c6']), 2))) - cr['ZEROCNK']
@@ -324,22 +325,29 @@ def uvwind(winddir, wind_speed):
     This function convert wind speed and direction in to u,v component.
     The Winddirection is given in degree,
     """
-
+    winddir, wind_speed = np.abs(winddir), np.abs(wind_speed)
     u = (-1) * np.multiply(wind_speed, np.sin(np.radians(winddir)))
     v = (-1) * np.multiply(wind_speed, np.cos(np.radians(winddir)))
     return u, v
 
 
 def uv2spddir(u, v):
+    
 
     direction = np.rad2deg(np.arctan2(-u, -v))
-
     if isinstance(direction, np.ndarray):
         direction = np.remainder(direction + 360, 360)
     else:
         direction = (direction + 360) % 360
 
-    return (direction, np.sqrt(np.square(u) + np.square(v)))
+    wind_speed = np.sqrt(np.square(u) + np.square(v))
+    if type(wind_speed) is not np.ndarray:
+        if wind_speed == 0:
+            direction = np.nan
+    else:
+        direction[np.where(wind_speed == 0)] = np.nan
+
+    return (direction, wind_speed)
 
 
 def mean_wind(u, v, ps, stu=0.0, stv=0.0):
