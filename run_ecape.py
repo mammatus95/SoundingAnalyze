@@ -8,7 +8,7 @@ import numpy as np
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
-from src.meteolib import cr, temp_at_mixrat
+from src.meteolib import cr, temp_at_mixrat, q_to_mixrat
 from src.cm1_lib import read_modelsounding, interpolating_sounding, calculate_density_potential_temperature
 from src.cm1_lib import calculate_PII, calculate_pressure, calculate_temperature_density, calculate_density, calculate_temperature
 from src.ecape_lib import CI_model, compute_CAPE_AND_CIN, compute_w, compute_NCAPE, compute_VSR, compute_ETILDE
@@ -23,65 +23,60 @@ def main():
     sound_filename = 'src/example/sounding_base.txt'
     #sound_filename = 'src/example/sounding_noshear.txt'
 
-    Z, Th, r_v, u, v, p_sfc = read_modelsounding(sound_filename)
-    Z, Th, r_v, u, v = interpolating_sounding(Z, Th, r_v, u, v)
+    z_env, Th_env, qv_env, u_env, v_env, p_sfc = read_modelsounding(sound_filename)
+    z_env, Th_env, qv_env, u_env, v_env = interpolating_sounding(z_env, Th_env, qv_env, u_env, v_env)
+    mr_env = q_to_mixrat(qv_env)
 
+    Th_rho = calculate_density_potential_temperature(Th_env, qv_env)
 
-    Th_rho = calculate_density_potential_temperature(Th, r_v)
+    PII = calculate_PII(z_env, Th_rho, p_sfc*100.0)
 
-    PII = calculate_PII(Z, Th_rho, p_sfc*100.0)
+    pres_env = calculate_pressure(PII)
 
-    pres = calculate_pressure(PII)
+    T_rho = calculate_temperature_density(PII, Th_env, qv_env)
 
-    T_rho = calculate_temperature_density(PII, Th, r_v)
+    rho = calculate_density(pres_env, T_rho)
 
-    rho = calculate_density(pres, T_rho)
+    T_env = calculate_temperature(pres_env, Th_env)
 
-    T0 = calculate_temperature(pres, Th)
-
-    TD0 = temp_at_mixrat(r_v*1000, pres/100) # degree C
+    TD_env = temp_at_mixrat(mr_env*1000, pres_env/100) # degree C
 
     T1 = 273.15
     T2 = 253.15
 
 
-
-    q0 = (1 - r_v)*r_v
-    p0 = pres
-    z0 = Z
-
     # GET THE SURFACE-BASED CAPE, CIN, LFC, EL
-    CAPE, CIN, LFC, EL = compute_CAPE_AND_CIN(T0, p0, q0, 0, 0, 0, z0, T1, T2)
+    CAPE, CIN, LFC, EL = compute_CAPE_AND_CIN(T_env, pres_env, qv_env, 0, 0, 0, z_env, T1, T2)
     print(f"CAPE: {CAPE} CIN: {CIN} LFC: {LFC} EL: {EL}")
     
     # GET NCAPE, WHICH IS NEEDED FOR ECAPE CALULATION
-    NCAPE, MSE0_star, MSE0bar = compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL)
+    NCAPE, MSE0_star, MSE0bar = compute_NCAPE(T_env, pres_env, qv_env, z_env, T1, T2, LFC, EL)
 
     # GET THE 0-1 KM MEAN STORM-RELATIVE WIND, ESTIMATED USING BUNKERS METHOD FOR RIGHT-MOVER STORM MOTION
-    V_SR, C_x, C_y = compute_VSR(z0, u, v)
+    V_SR, C_x, C_y = compute_VSR(z_env, u_env, v_env)
 
-    WCAPE, WCIN, WLFC, WEL = compute_w(T0, p0, q0, 0, 0, 0, z0, T1, T2, 1000, u, v, V_SR)
+    WCAPE, WCIN, WLFC, WEL = compute_w(T_env, pres_env, qv_env, 0, 0, 0, z_env, T1, T2, 1000, u_env, v_env, V_SR)
 
 
     # GET E_TILDE, WHICH IS THE RATIO OF ECAPE TO CAPE.  ALSO, VAREPSILON IS THE FRACITONAL ENTRAINMENT RATE, AND RADIUS IS THE THEORETICAL UPRAFT RADIUS
     E_tilde, varepsilon, Radius = compute_ETILDE(CAPE, NCAPE, V_SR, EL, 250)
 
     # CI THEORETICAL MODEL
-    R_TS = CI_model(T0, p0, q0, z0, u, v, T1, T2, np.arange(300, 6000, 100), 20, 250, 0)
+    R_TS = CI_model(T_env, pres_env, qv_env, z_env, u_env, v_env, T1, T2, np.arange(300, 6000, 100), 20, 250, 0)
 
     
     fracent=varepsilon
     #prate=3e-5
-    ECAPE, ECIN, ELFC, EEL = compute_CAPE_AND_CIN(T0, p0, q0, 0, fracent, 0, z0, T1, T2)
+    ECAPE, ECIN, ELFC, EEL = compute_CAPE_AND_CIN(T_env, pres_env, qv_env, 0, fracent, 0, z_env, T1, T2)
     print(f"ECAPE: {ECAPE} ECIN: {ECIN} ELFC: {ELFC} EEL: {EEL}")
 
     print(f"CAPE: {CAPE} WCAPE: {WCAPE} NCAPE: {NCAPE} E_tilde: {E_tilde} ECAPE: {ECAPE}")
 
     # calculate parcel trajectories for plotting
-    T_lif, Qv_lif, Qt_lif, _ = lift_parcel_adiabatic(T0, p0, q0, 0, 0, 0, z0, T1, T2)
-    T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape, _ = lift_parcel_adiabatic(T0, p0, q0, 0, fracent, 0, z0, T1, T2)
+    T_lif, Qv_lif, Qt_lif, _ = lift_parcel_adiabatic(T_env, pres_env, qv_env, 0, 0, 0, z_env, T1, T2)
+    T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape, _ = lift_parcel_adiabatic(T_env, pres_env, qv_env, 0, fracent, 0, z_env, T1, T2)
 
-    plot_stuve_cm1(T0 - cr['ZEROCNK'], TD0, pres, T_lif, Qv_lif, Qt_lif, T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape)
+    plot_stuve_cm1(T_env - cr['ZEROCNK'], TD_env, pres_env, T_lif, Qv_lif, Qt_lif, T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape)
 
 if __name__ == '__main__':
     print("Running ECAPE")

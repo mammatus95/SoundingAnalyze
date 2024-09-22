@@ -311,14 +311,14 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     #input arguments
     #T0: sounding profile of temperature (in K)
     #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (in kg/kg)
+    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
     #start_loc: index of the parcel starting location (set to 1 for the
     #lowest: level in the sounding)
     #fracent: fractional entrainment rate (in m^-1)
     
     #output arguments
     #T_lif: lifted parcel temperature
-    #Qv_lif: lifted parcel water vapor mass fraction
+    #Qv_lif: lifted parcel water vapor mass fraction (specific humidity), in kg/kg
     #Qt_lif: lifted parcel total water mass fraction
     #B_lif: Lifted parcel buoyancy, computed using Eq. B6 in (Peters et al.
     #2022) (accounts for virtual temperature and loading effects)
@@ -344,7 +344,7 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     p0 : array_like
         Sounding profile of pressure (in Pa)
     q0 : array_like
-        Sounding profile of water vapor mass fraction (in kg/kg)
+        Sounding profile of water vapor mass fraction (specific humidity), in kg/kg
     start_loc : int
         Index of the parcel starting location (set to 1 for the lowest level in
         the sounding)
@@ -366,7 +366,7 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     T_lif : array_like
         Lifted parcel temperature
     Qv_lif : array_like
-        Lifted parcel water vapor mass fraction
+        Lifted parcel water vapor mass fraction (specific humidity), in kg/kg
     Qt_lif : array_like
         Lifted parcel total water mass fraction
     B_lif : array_like
@@ -383,7 +383,7 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
 
     
     T_lif=np.zeros(T0.shape)*np.nan #temperature of the lifted parcel
-    Qv_lif=np.zeros(T0.shape)*np.nan #water vapor mass fraction of the lifted parcel
+    Qv_lif=np.zeros(T0.shape)*np.nan #water vapor mass fraction of the lifted parcel (specific humidity), in kg/kg
     Qt_lif=np.ones(T0.shape)*np.nan #total water mass fraction of the lifted parcel
 
     if start_loc>0:
@@ -487,7 +487,7 @@ def compute_CAPE_AND_CIN(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     #input arguments
     #T0: sounding profile of temperature (in K)
     #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (in kg/kg)
+    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
     #start_loc: index of the parcel starting location (set to 1 for the
     #fracent: fractional entrainment rate (in m^-1)
     #prate: precipitation rate (in m^-1)
@@ -876,7 +876,7 @@ def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0,
     #input arguments
     #T0: sounding profile of temperature (in K)
     #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (in kg/kg)
+    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
     #start_loc: index of the parcel starting location (set to 1 for the
     #lowest: level in the sounding)
     #fracent: fractional entrainment rate (in m^-1)
@@ -1000,7 +1000,7 @@ def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0,
     #input arguments
     #T0: sounding profile of temperature (in K)
     #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (in kg/kg)
+    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
     #start_loc: index of the parcel starting location (set to 1 for the
     #lowest: level in the sounding)
     #fracent: fractional entrainment rate (in m^-1)

@@ -40,7 +40,7 @@ def read_modelsounding(filename='input_sounding'):
     data_ctr = 0
     Z = []
     Th = []
-    r_v = []
+    qv = []
     u = []
     v = []
     with open(filename, newline = '') as sounding_csv:
@@ -53,17 +53,17 @@ def read_modelsounding(filename='input_sounding'):
                 r_sfc = float(dataon[3])
                 Z.append(0.0)
                 Th.append(Th_sfc)
-                r_v.append(r_sfc)
+                qv.append(r_sfc)
                 u.append(0.0)
                 v.append(0.0)
             else:
                 Z.append(float(dataon[0]))
                 Th.append(float(dataon[2]))
-                r_v.append(float(dataon[3]))
+                qv.append(float(dataon[3]))
                 u.append(float(dataon[4]))
                 v.append(float(dataon[5]))
     
-    return Z, Th, r_v, u, v, p_sfc
+    return Z, Th, qv, u, v, p_sfc
 
 
 # ----------------------------------------------------------------------------------------------------------------------------

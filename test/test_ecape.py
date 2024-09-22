@@ -109,11 +109,11 @@ class TestComputeMoistStaticEnergy(unittest.TestCase):
 
 
     def test_MSE(self):
-        T0 = 300.0
-        q0 = 0.5
+        T_env = 300.0
+        mr_env = 0.5
         z0 = 100.0
-        expected_result = cr['cpl']*T0 + cr['xlv']*q0 + cr['G']*z0
-        self.assertAlmostEqual(compute_moist_static_energy(T0, q0, z0), expected_result)
+        expected_result = cr['cpl']*T_env + cr['xlv']*mr_env + cr['G']*z0
+        self.assertAlmostEqual(compute_moist_static_energy(T_env, mr_env, z0), expected_result)
 
 
 
@@ -168,16 +168,16 @@ class TestMoislif(unittest.TestCase):
         qv = 0.014  # kg/kg
         qvv = 0.014  # kg/kg
         qvi = 0.0  # kg/kg
-        p0 = 101325  # Pa
-        T0 = 288.15  # K
-        q0 = 0.01  # kg/kg
+        pres_env = 101325  # Pa
+        T_env = 288.15  # K
+        mr_env = 0.01  # kg/kg
         qt = 0.01  # kg/kg
         fracent = 0.001  # m^-1
         prate = 0.0  # m^-1
         T1 = 273.15  # K
         T2 = 233.15  # K
 
-        gamma_m = moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2)
+        gamma_m = moislif(T, qv, qvv, qvi, pres_env, T_env, mr_env, qt, fracent, prate, T1, T2)
         self.assertLess(gamma_m, 0.0)  # lapse rate should be positive
 
     def test_upperair_input(self):
@@ -185,16 +185,16 @@ class TestMoislif(unittest.TestCase):
         qv = 0.001  # kg/kg
         qvv = 0.001  # kg/kg
         qvi = 0.001  # kg/kg
-        p0 = 70000  # Pa
-        T0 = 256.15  # K
-        q0 = 0.001  # kg/kg
+        pres_env = 70000  # Pa
+        T_env = 256.15  # K
+        mr_env = 0.001  # kg/kg
         qt = 0.01  # kg/kg
         fracent = 0.001  # m^-1
         prate = 0.0  # m^-1
         T1 = 273.15  # K
         T2 = 233.15  # K
 
-        gamma_m = moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2)
+        gamma_m = moislif(T, qv, qvv, qvi, pres_env, T_env, mr_env, qt, fracent, prate, T1, T2)
         self.assertLess(gamma_m, 0.0)  # lapse rate should be positive
 
     """
@@ -203,9 +203,9 @@ class TestMoislif(unittest.TestCase):
         qv = 0.01  # kg/kg
         qvv = 0.01  # kg/kg
         qvi = 0.0  # kg/kg
-        p0 = 101325  # Pa
-        T0 = 288.15  # K
-        q0 = 0.01  # kg/kg
+        pres_env = 101325  # Pa
+        T_env = 288.15  # K
+        mr_env = 0.01  # kg/kg
         qt = 0.01  # kg/kg
         fracent = 0.001  # m^-1
         prate = 0.0  # m^-1
@@ -213,7 +213,7 @@ class TestMoislif(unittest.TestCase):
         T2 = 233.15  # K
 
         with self.assertRaises(ValueError):
-            moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2)
+            moislif(T, qv, qvv, qvi, pres_env, T_env, mr_env, qt, fracent, prate, T1, T2)
     """
 
 if __name__ == '__main__':
