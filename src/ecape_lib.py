@@ -34,6 +34,8 @@ def domega(T, T1, T2):
     return (np.heaviside(T1-T, 1) - np.heaviside(T2-T, 1))/(T2-T1)
 
 # ----------------------------------------------------------------------------------------------------------------------------
+
+
 def get_qs(qt, rs):
     """
     Calculate the saturation mass fraction qs from the total water mass fraction qt and the saturation mixing ratio rs.
@@ -41,43 +43,49 @@ def get_qs(qt, rs):
     Parameters
     ----------
     qt : numpy.ndarray
-        Total water mass fraction (kg/kg)
+        Total water mass fraction in kg/kg
     rs : numpy.ndarray
-        Saturation mixing ratio (kg/kg)
+        Saturation mixing ratio in kg/kg
 
     Returns
     -------
     qs : numpy.ndarray
-        Saturation mass fraction (kg/kg)
+        Saturation mass fraction in kg/kg
     """
     return (1 - qt)*rs
 
 
 # ----------------------------------------------------------------------------------------------------------------------------
 # moist static energy
-def compute_moist_static_energy(T0, q0, z0):
+
+def compute_moist_static_energy(T, q, z):
     """
     Compute the moist static energy (MSE) of a parcel.
 
     Parameters
     ----------
-    T0 : numpy.ndarray
-        Temperature of the parcel (K)
-    q0 : numpy.ndarray
-        Total water mass fraction of the parcel (kg/kg)
-    z0 : numpy.ndarray
-        Height above ground level of the parcel (m)
+    T : numpy.ndarray
+        Temperature of the parcel in K
+    q : numpy.ndarray
+        Total water mass fraction of the parcel in kg/kg
+    z : numpy.ndarray
+        Height above ground level of the parcel in m
 
     Returns
     -------
     MSE : numpy.ndarray
-        Moist static energy of the parcel (J/kg)
+        Moist static energy of the parcel in J/kg
+
+    Units
+    -----
+    [MSE] = J/kg/K * K + J/kg* kg/kg + m/(s*s) * m = [J/kg]
     """
-    
-    return cr['cpl']*T0 + cr['xlv']*q0 + cr['G']*z0
+    return cr['cpl']*T + cr['xlv']*q + cr['G']*z
 
 # ----------------------------------------------------------------------------------------------------------------------------
 # saturation mixing ratio
+
+
 def compute_rsat(T, p, T1, T2, iceflag=0):
     """
     This function computes the saturation mixing ratio, using the integrated
@@ -174,6 +182,27 @@ def drylift(T, qv, T0, qv0, fracent):
 # using the romps 2017 formula
 
 def compute_LCL(T, qv, p):
+    """
+    Compute the lifted condensation level (LCL) following Romps (2017)
+
+    Parameters
+    ----------
+    T : float
+        Temperature in K
+    qv : float
+        Water vapor mass fraction (specific humidity) in kg/kg
+    p : float
+        Pressure in Pa
+
+    Returns
+    -------
+    Z_LCL : float
+        LCL height in m
+    T_LCL : float
+        LCL temperature in K
+    P_LCL : float
+        LCL pressure in Pa
+    """
     cpm = (1 - qv)*cr['cpd'] + qv*cr['cpv']
     Rm = (1 - qv)*cr['Rd'] + qv*cr['Rv']
     
@@ -186,18 +215,36 @@ def compute_LCL(T, qv, p):
     RH = qv/q_sat
     arg1 = RH**(1/a)
     arg2 = c*np.exp(1)**c
-    arg3 = lambertw(arg1*arg2, k=-1)
+    arg3 = np.real(lambertw(arg1*arg2, k=-1))
     T_LCL = c*T/arg3
     P_LCL = p*(T_LCL/T)**(cpm/Rm)
     Z_LCL = (cpm/cr['G'])*(T - T_LCL)
     
-    return Z_LCL
+    return float(Z_LCL), float(T_LCL), float(P_LCL)
 
 
-# using numerical integration
 # using numerical integration
 def compute_LCL_NUMERICAL(T, qv, p, dz):
 
+    """
+    Compute the lifted condensation level (LCL) using numerical integration
+
+    Parameters
+    ----------
+    T : float
+        Temperature in K
+    qv : float
+        Water vapor mass fraction (specific humidity) in kg/kg
+    p : float
+        Pressure in Pa
+    dz : float
+        Vertical resolution of the integration in m
+
+    Returns
+    -------
+    Z_LCL : float
+        LCL height in m
+    """
     nfound_LCL = True
     ind_hgt = 0
     Ton = T
@@ -213,7 +260,7 @@ def compute_LCL_NUMERICAL(T, qv, p, dz):
             nfound_LCL = False
     Z_LCL = ind_hgt*dz
     
-    return Z_LCL
+    return float(Z_LCL)
 
 # ----------------------------------------------------------------------------------------------------------------------------
 # lapse rate for a saturated parcel
@@ -301,41 +348,12 @@ def moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2):
 
 
 # ----------------------------------------------------------------------------------------------------------------------------
+
 def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
-    #[T_lif, Qv_lif, Qt_lif, B_lif]
-
-    #this function computes lifted parcel properties using the unsaturated
-    #and saturated lapse rate formulas from (Peters et al. 2022)
-    #https://doi-org.ezaccess.libraries.psu.edu/10.1175/JAS-D-21-0118.1 
-    
-    #input arguments
-    #T0: sounding profile of temperature (in K)
-    #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
-    #start_loc: index of the parcel starting location (set to 1 for the
-    #lowest: level in the sounding)
-    #fracent: fractional entrainment rate (in m^-1)
-    
-    #output arguments
-    #T_lif: lifted parcel temperature
-    #Qv_lif: lifted parcel water vapor mass fraction (specific humidity), in kg/kg
-    #Qt_lif: lifted parcel total water mass fraction
-    #B_lif: Lifted parcel buoyancy, computed using Eq. B6 in (Peters et al.
-    #2022) (accounts for virtual temperature and loading effects)
-    
-    #prate: precipitation rate (in m^-1) large values make parcel more
-    #pseudoadiabatic, small values make parcel more adiabatic.  I usually
-    #just set it to 0 to get an adiabatic parce
-    
-    #z0: sounding profile of height above ground level (first height should
-    #be 0 m)
-    #T1 warmest mixed-phase temperature
-    #T2 coldest mixed-phase temperature
-
-
     """
     Compute lifted parcel properties using the unsaturated and saturated lapse
     rate formulas from (Peters et al. 2022).
+    https://doi-org.ezaccess.libraries.psu.edu/10.1175/JAS-D-21-0118.1 
     
     Parameters
     ----------
@@ -355,7 +373,7 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
         small values make parcel more adiabatic.  I usually just set it to 0 to
         get an adiabatic parcel
     z0 : array_like
-        Sounding profile of height above ground level (first height should be 0 m)
+        Sounding profile of height above ground level (AGL, first height should be 0 m)
     T1 : float
         Warmest mixed-phase temperature
     T2 : float
@@ -368,60 +386,60 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     Qv_lif : array_like
         Lifted parcel water vapor mass fraction (specific humidity), in kg/kg
     Qt_lif : array_like
-        Lifted parcel total water mass fraction
+        Lifted parcel total water mass fraction (cloud water), in kg/kg
     B_lif : array_like
         Lifted parcel buoyancy, computed using Eq. B6 in (Peters et al. 2022)
         (accounts for virtual temperature and loading effects)
     """
         
-    #ESTIMATE THE MOIST STATIC ENERGY (MSE)
+    # compute the moist static energy (MSE)
     MSE = compute_moist_static_energy(T0, q0, z0)
-    mn_hgt = np.where(MSE==np.min(MSE)) #FIND THE INDEX OF THE HEIGHT OF MINIMUM MSE
+    # find the the index of the height of minimum MSE
+    mn_hgt = np.where(MSE==np.min(MSE))
+    # mn_hgt = int(mn_hgt[0])
     
-    #descriminator function between liquid and ice (i.e., omega defined in the
-    #beginning of section 2e in Peters et al. 2022)
+    T_lif = np.zeros(T0.shape)*np.nan   # temperature of the lifted parcel
+    Qv_lif = np.zeros(T0.shape)*np.nan  # water vapor mass fraction of the lifted parcel (specific humidity), in kg/kg
+    Qt_lif = np.ones(T0.shape)*np.nan   # total water mass fraction of the lifted parcel
 
-    
-    T_lif=np.zeros(T0.shape)*np.nan #temperature of the lifted parcel
-    Qv_lif=np.zeros(T0.shape)*np.nan #water vapor mass fraction of the lifted parcel (specific humidity), in kg/kg
-    Qt_lif=np.ones(T0.shape)*np.nan #total water mass fraction of the lifted parcel
-
+    # set initial values to that of the environment
     if start_loc>0:
-        T_lif[0:start_loc+1]=T0[0:start_loc+1] #set initial values to that of the environment
-        Qv_lif[0:start_loc+1]=q0[0:start_loc+1] #set initial values to that of the environment
-        Qt_lif[0:start_loc+1]=Qv_lif[0:start_loc+1] #set initial values to that of the environment
+        T_lif[0:start_loc+1] = T0[0:start_loc+1]
+        Qv_lif[0:start_loc+1] = q0[0:start_loc+1]
+        Qt_lif[0:start_loc+1] = Qv_lif[0:start_loc+1]
     else:
-        T_lif[0]=T0[0] #set initial values to that of the environment
-        Qv_lif[0]=q0[0] #set initial values to that of the environment
-        Qt_lif[0]=Qv_lif[0] #set initial values to that of the environment
+        T_lif[0] = T0[0]
+        Qv_lif[0] = q0[0]
+        Qt_lif[0] = Qv_lif[0]
 
 
     q_sat_prev=0
     B_run = 0
     iz=start_loc
+
     #
     #for iz in np.arange(start_loc+1, z0.shape[0]):
     #
     #
-    #I REVISED THIS A BIT.  TO MAKE THE CODE FASTER, I HAVE THE CALCULATION CUT OUT WHEN THE INTEGRATED NEGATIVE BUOYANCY ("BRUN") 
-    #BECOMES MORE NEGATIVE THAN THE TOTAL INTEGRATED POSITIVE BUOYANCY.  I RESTRICT THIS TO ONLY HAPPEN AFTER WE HAVE PASSED 
-    #THE HEIGHT OF MINIMUM MSE.  UNCOMMENT THE FOR LOOP ABOVE AND COMMENT OUT THE WHILE LOOP IF YOU JUST WANT TO INTEGRATE TO THE TOP OF THE SOUNDING.
-    #THE +25 PART IN THE WHILE STATEMENT IS A PAD ON B_RUN (THE NEGATIVE CAPE HAS TO BE 25 J/KG LESS THAN THE POSITIVE CAPE TO KILL THE LOOP)
+    # I REVISED THIS A BIT.  TO MAKE THE CODE FASTER, I HAVE THE CALCULATION CUT OUT WHEN THE INTEGRATED NEGATIVE BUOYANCY ("BRUN") 
+    # BECOMES MORE NEGATIVE THAN THE TOTAL INTEGRATED POSITIVE BUOYANCY.  I RESTRICT THIS TO ONLY HAPPEN AFTER WE HAVE PASSED 
+    # THE HEIGHT OF MINIMUM MSE.  UNCOMMENT THE FOR LOOP ABOVE AND COMMENT OUT THE WHILE LOOP IF YOU JUST WANT TO INTEGRATE TO THE TOP OF THE SOUNDING.
+    # THE +25 PART IN THE WHILE STATEMENT IS A PAD ON B_RUN (THE NEGATIVE CAPE HAS TO BE 25 J/KG LESS THAN THE POSITIVE CAPE TO KILL THE LOOP)
     # while iz<(z0.shape[0])-1 and (z0[iz]<z0[mn_hgt] or (B_run+25)>0):
     # while iz<(z0.shape[0])-1:
     while iz<(z0.shape[0])-1 and (z0[iz]<z0[mn_hgt] or (B_run+250)>0):
         iz = iz + 1
         q_sat=(1-Qt_lif[iz-1])*compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 1)
-        if Qv_lif[iz-1]<q_sat: #if we are unsaturated, go up at the unsaturated adiabatic lapse rate (eq. 19 in Peters et al. 2022)
+        if Qv_lif[iz-1]<q_sat: # if we are unsaturated, go up at the unsaturated adiabatic lapse rate (eq. 19 in Peters et al. 2022)
             
         
         
             T_lif[iz] = T_lif[iz-1] + (z0[iz] - z0[iz-1])*drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
             Qv_lif[iz] = Qv_lif[iz-1] - (z0[iz] - z0[iz-1])*fracent*( Qv_lif[iz-1] - q0[iz-1] )
             Qt_lif[iz] = Qv_lif[iz]
-            q_sat=(1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
+            q_sat = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
             
-            if Qv_lif[iz]>=q_sat: #if we hit saturation, split the vertical step into two stages.  The first stage advances at the saturated lapse rate to the saturation point, and the second stage completes the grid step at the moist lapse rate
+            if Qv_lif[iz]>=q_sat: # if we hit saturation, split the vertical step into two stages.  The first stage advances at the saturated lapse rate to the saturation point, and the second stage completes the grid step at the moist lapse rate
                 OMEGA = omega(T_lif[iz-1], T1, T2)
                 dOMEGA = domega(T_lif[iz-1], T1, T2)
                 satrat=(Qv_lif[iz]-q_sat_prev)/(q_sat-q_sat_prev)
@@ -468,8 +486,8 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
 
     T_rho_lif = T_lif*(1 + (cr['Rv']/cr['Rd'])*Qv_lif - Qt_lif)
     T_0_lif = T0*(1 + (cr['Rv']/cr['Rd'] - 1)*q0)
-    #T_rho_lif=T_lif*(1 - Qt_lif + Qv_lif)/( 1 + (epsilon - 1)/( ( epsilon*(1 - Qt_lif)/Qv_lif - 1) ) )
-    #T_0_lif=T0/( 1 + (epsilon - 1)/( ( epsilon*(1 - q0)/q0 - 1) ) )
+    # T_rho_lif=T_lif*(1 - Qt_lif + Qv_lif)/( 1 + (epsilon - 1)/( ( epsilon*(1 - Qt_lif)/Qv_lif - 1) ) )
+    # T_0_lif=T0/( 1 + (epsilon - 1)/( ( epsilon*(1 - q0)/q0 - 1) ) )
     
     B_lif=cr['G']*(T_rho_lif - T_0_lif)/T_0_lif
     
@@ -480,47 +498,74 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
 
 
 def compute_CAPE_AND_CIN(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
-#[CAPE, CIN, LFC, EL]
 
-    #this function computes CAPE and CIN
+    """
+    This function computes CAPE and CIN, along with the height of the Lifted
+    Condensation Level (LCL) and the Equilibrium Level (EL).
+
+    Parameters
+    ----------
+    T0 : float
+        Temperature profile in K
+    p0 : float
+        Pressure profile in Pa
+    q0 : float
+        Water vapor mass fraction profile (specific humidity) in kg/kg
+    start_loc : int
+        Index of the parcel starting location
+    fracent : float
+        Fractional entrainment rate in m^-1
+    prate : float
+        Precipitation rate in m^-1
+    z0 : float
+        Height of the profile in m
+    T1 : float
+        Warmest mixed-phase temperature
+    T2 : float
+        Coldest mixed-phase temperature
+
+    Returns
+    -------
+    CAPE : float
+        Convective Available Potential Energy in J/kg
+    CIN : float
+        Convective Inhibition in J/kg
+    LFC : float
+        Lifted Condensation Level in m
+    EL : float
+        Equilibrium Level in m
+
+    Notes
+    -----
+    If the parcel does not have any positive buoyancy, CAPE and CIN will be
+    zero and the LCL and EL will be set to NaN.
+    """
+
+    # compute lifted parcel buoyancy
+    _, _, _, B_lifted_parcel = lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2)
     
-    #input arguments
-    #T0: sounding profile of temperature (in K)
-    #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
-    #start_loc: index of the parcel starting location (set to 1 for the
-    #fracent: fractional entrainment rate (in m^-1)
-    #prate: precipitation rate (in m^-1)
-    #z0: height of the profile (in m)
-    #T1: warmest mixed-phase temperature?
-    #T2: coldest mixed-phase temperature?
-    
-    
-    #compute lifted parcel buoyancy
-    _, _, _, B_lif=lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2)
-    
-    if np.nanmax(B_lif)>0:
-        #CAPE will be the total integrated positive buoyancy
-        B_pos = np.zeros(B_lif.shape)
-        B_pos[:] = B_lif[:]
+    if np.nanmax(B_lifted_parcel)>0:
+
+        # CAPE will be the total integrated positive buoyancy
+        B_pos = np.zeros(B_lifted_parcel.shape)
+        B_pos[:] = B_lifted_parcel[:]
         B_pos[np.where(B_pos<0)]=0
         dz = z0[1:z0.shape[0]] - z0[0:z0.shape[0]-1]
-        CAPE = np.nansum( 0.5*B_pos[0:z0.shape[0]-1]*dz + 0.5*B_pos[1:z0.shape[0]]*dz )
+        CAPE = np.nansum(0.5*B_pos[0:z0.shape[0]-1]*dz + 0.5*B_pos[1:z0.shape[0]]*dz)
         
-        #CIN will be the total negative buoyancy below the height of maximum
-        #buoyancy
-        B_neg = np.zeros(B_lif.shape)
-        B_neg[:] = B_lif[:]
-        mx = np.nanmax(B_lif)
-        imx = np.where(B_lif==mx)
+        # CIN will be the total negative buoyancy below the height of maximum
+        B_neg = np.zeros(B_lifted_parcel.shape)
+        B_neg[:] = B_lifted_parcel[:]
+        mx = np.nanmax(B_lifted_parcel)
+        imx = np.where(B_lifted_parcel==mx)
         imx=imx[0][0]
         B_neg[0:imx]=np.minimum( B_neg[0:imx], 0 )
         B_neg[imx:z0.shape[0]]= 0
-        CIN = np.nansum( 0.5*B_neg[0:z0.shape[0]-1]*dz + 0.5*B_neg[1:z0.shape[0]]*dz )
+        CIN = np.nansum(0.5*B_neg[0:z0.shape[0]-1]*dz + 0.5*B_neg[1:z0.shape[0]]*dz)
         
-        #LFC will be the last instance of negative buoyancy before the
-        #continuous intecr['Rv']al that contains the maximum in buoyancy
-        fneg = np.where(B_lif<0)
+        # LFC will be the last instance of negative buoyancy before the
+        # continuous integral that contains the maximum in buoyancy
+        fneg = np.where(B_lifted_parcel<0)
         fneg=fneg[0]
         inn = np.where(fneg<imx)
         inn = inn[0]
@@ -530,8 +575,8 @@ def compute_CAPE_AND_CIN(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
         else:
             LFC = z0[start_loc]
         
-        #EL will be last instance of positive buoyancy
-        fpos = np.where(B_lif>0)
+        # EL will be last instance of positive buoyancy
+        fpos = np.where(B_lifted_parcel>0)
         fpos=fpos[0]
         EL = 0.5*z0[np.max(fpos)] + 0.5*z0[np.max(fpos)+1]
     else:
@@ -547,18 +592,50 @@ def compute_CAPE_AND_CIN(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
 # compute NCAPE
 def compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL):
     
+    
+    """
+    Compute NCAPE (Normalized CAPE) and other associated values.
+
+    Parameters
+    ----------
+    T0 : numpy.ndarray
+        Temperature of the parcel in K
+    p0 : numpy.ndarray
+        Pressure of the parcel in Pa
+    q0 : numpy.ndarray
+        Total water mass fraction of the parcel in kg/kg
+    z0 : numpy.ndarray
+        Height above ground level of the parcel in m
+    T1 : float
+        Warmest mixed-phase temperature
+    T2 : float
+        Coldest mixed-phase temperature
+    LFC : float
+        Height of the level of free convection in m
+    EL : float
+        Height of the equilibrium level in m
+
+    Returns
+    -------
+    NCAPE : float
+        Normalized CAPE in J/kg
+    MSE0_star : numpy.ndarray
+        Saturated moist static energy in J/kg
+    MSE0bar : numpy.ndarray
+        Average moist static energy in J/kg
+    """
     if np.isnan(LFC) or np.isnan(EL):
         return np.nan, np.nan, np.nan
 
-    # COMPUTE THE MOIST STATIC ENERGY
+    # compute the moist static energy (MSE)
     MSE0 = compute_moist_static_energy(T0, q0, z0)
     
-    # COMPUTE THE SATURATED MOIST STATIC ENERGY
+    # compute the saturated moist static energy
     rsat = compute_rsat(T0, p0, T1, T2, 0)
     qsat = (1 - rsat)*rsat
     MSE0_star = compute_moist_static_energy(T0, qsat, z0)
     
-    # COMPUTE MSE0_BAR
+    # compute MSE0_BAR
     MSE0bar = np.zeros(MSE0.shape)
     #for iz in np.arange(0, MSE0bar.shape[0], 1):
      #   MSE0bar[iz]=np.mean(MSE0[1:iz])
@@ -610,30 +687,30 @@ def compute_VSR(z0, u0, v0):
     BK_orthy=-BK_dirx*7.5
 
 
-    SR_mean_u= u0 - meanx
-    SR_mean_v= v0 - meany
+    SR_mean_u = u0 - meanx
+    SR_mean_v = v0 - meany
     dudz=np.zeros(u0.shape)
     dvdz=np.zeros(v0.shape)
     dudz[1:dudz.shape[0]-1] = (u0[2:dudz.shape[0]]-u0[0:dudz.shape[0]-2])/(z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2])
-    dudz[0]=2*dudz[1]-dudz[2]
+    dudz[0] = 2*dudz[1]-dudz[2]
     dvdz[1:dudz.shape[0]-1] = (v0[2:dudz.shape[0]]-v0[0:dudz.shape[0]-2])/(z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2])
-    dvdz[0]=2*dvdz[1]-dvdz[2]
+    dvdz[0] = 2*dvdz[1]-dvdz[2]
     f1000 = np.where(z0<=1000)[0]
     SRH_mean = abs(np.mean(-SR_mean_u[f1000]*dvdz[f1000] + SR_mean_v[f1000]*dudz[f1000])*1000.0)
     
     
-    propfac=min(SRH_mean/150, 1)
+    propfac = min(SRH_mean/150, 1)
     propfac = 1
 
 
-    C_x=meanx+propfac*BK_orthx
-    C_y=meany+propfac*BK_orthy
+    C_x = meanx+propfac*BK_orthx
+    C_y = meany+propfac*BK_orthy
     
     u_sr = u0 - C_x
     v_sr = v0 - C_y
     
     f1000 = np.where(z0<=1000)[0]
-    V_SR = np.nanmean(np.sqrt(  u_sr[f1000]**2 + v_sr[f1000]**2  ))
+    V_SR = np.nanmean(np.sqrt(u_sr[f1000]**2 + v_sr[f1000]**2))
     return V_SR, C_x, C_y
 
 def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
@@ -643,7 +720,7 @@ def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
     
     zdiff = (z0 - EL)**2
     ind_top = np.where(zdiff==np.min(zdiff))[0][0]
-    inds_avg=np.arange(0, ind_top, 1)
+    inds_avg = np.arange(0, ind_top, 1)
     
     meanx = np.nanmean(B_pos[inds_avg]*rho0[inds_avg]*u0[inds_avg])/np.nanmean(B_pos[inds_avg]*rho0[inds_avg])
     meany = np.nanmean(B_pos[inds_avg]*rho0[inds_avg]*v0[inds_avg])/np.nanmean(B_pos[inds_avg]*rho0[inds_avg])
@@ -766,25 +843,11 @@ def CI_model(T0, p0, q0, z0, u0, v0, T1, T2, radrng, itmax, L, prate_global):
         #prate_global, the precipitation loss inverse length scale (km^(-1)).  Larger values make the
             #parcel more pseudoadiabatic, smaller values make it more adiabatic.
     
-    #STANDAcr['Rd'] THERMODYNAMIC CONSTANTS
-    cr['Rd']=287.04 # %DRY GAS CONSTANT
-    cr['Rv']=461.5 # %GAS CONSTANT FOR WATEEER VAPRR
-    epsilon=cr['Rd']/cr['Rv'] # %RATO OF THE TWO
-    cp=1005 #HEAT CAPACITY OF DRY AIR AT CONSTANT PRESSUREE
-    gamma=cr['Rd']/cp #POTENTIAL TEMPERATURE EXPONENT
-    g=9.81 #GRAVITATIONAL CONSTANT
-    Gamma_d=g/cp #DRY ADIABATIC LAPSE RATE
-    cr['xlv']=2501000 #LATENT HEAT OF VAPORIZATION AT TRIPLE POINT TEMPERATURE
-    cr['xls']=2834000 #LATENT HEAT OF SUBLIMATION AT TRIPLE POINT TEMPERATURE
-    cr['cpv']=1870 #HEAT CAPACITY OF WATER VAPOR AT CONSTANT PRESSURE
-    cr['cpl']=4190 #HEAT CAPACITY OF LIQUID WATER
-    cr['cpi']=2106 #HEAT CAPACITY OF ICE
-    pref=611.65 #REFERENCE VAPOR PRESSURE OF WATER VAPOR AT TRIPLE POINT TEMPERATURE
-    cr['ttrip']=273.15 #TRIPLE POINT TEMPERATURE
+
     
 
     # Paramters unique to the ci model
-    alpha=0.8      # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
+    alpha = 0.8    # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
     start_loc = 0  # STARTING HEIGHT OF THE AIR PARCEL WE ARE LIFTING
     sig = 0.5      # RATIO OF THE HEIGHT OF WMAX TO EQUILBIRIUM LEVEL HEIGHT (SHOULD PROBABLY SET THIS TO 1)
     rfac = 1/4     # RELAXATION FACTOR FOR MODEL INTEGRATION.  SMALLER VALUE GIVES A SMOOTHER SOLUTION
@@ -979,123 +1042,6 @@ def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0,
         fnval = np.where(WSQ_prof == mxval)
         LFC = LCL
         if fnval[0].shape[0] > 0:
-            EL = z0[fnval[0][0]]
-        else:
-            EL = np.nan
-    else:
-        #IF WE HAVE NO POSITIVE BUOYANCY, SET EVERYTHING TO 0S AND NANS
-        CAPE = 0      
-        LFC = np.nan
-        EL = np.nan
-        B_pos = np.zeros(T0.shape)
-        
-
-    return CAPE, LFC, EL, B_pos
-
-def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0, V_SR):
-#[CAPE, CIN, LFC, EL]
-
-    #this function computes CAPE and CIN
-    
-    #input arguments
-    #T0: sounding profile of temperature (in K)
-    #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
-    #start_loc: index of the parcel starting location (set to 1 for the
-    #lowest: level in the sounding)
-    #fracent: fractional entrainment rate (in m^-1)
-    
-    # contants
-    c_d = 0.2 # drag coeficient on a sphere
-    Lambda=0.6 # RATIO OF ASCENT RATE OF THERMAL TO ITS MAX W
-    alpha=0.8 # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
-    
-    #COMPUTE A VERTICAL PROFILE OF THE MAGNITUDE OF VERTICAL WIND SHEAR
-    dz = np.zeros(u0.shape)
-    dz[0:u0.shape[0]-1]=z0[1:u0.shape[0]]-z0[0:u0.shape[0]-1]
-    dudz = np.zeros(u0.shape)
-    dvdz = np.zeros(u0.shape)
-    dudz[0:dudz.shape[0]-1]=(u0[1:dudz.shape[0]]-u0[0:dudz.shape[0]-1])/dz[0:dudz.shape[0]-1]
-    dvdz[0:dudz.shape[0]-1]=(v0[1:dudz.shape[0]]-v0[0:dudz.shape[0]-1])/dz[0:dudz.shape[0]-1]  
-    S = np.sqrt(dudz**2 + dvdz**2)                                            
-    
-    #COMPUTE THE LIFTED PARCEL BUOYANCY
-    _, Qv_lif, Qt_lif, B_lif=lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2)
-    
-    #CALCULATE THE LIFTED CONDENSATION LEVEL
-    qdiff = abs(Qt_lif - Qv_lif) #FIGURE OUT THE FIRST HEIGHT WHERE QV STARTS DEVIATING FROM QT, IMPLYING CONDENSATION
-    if np.logical_and(~np.isnan(qdiff[1]), np.nanmax(qdiff)>0):
-        lcl_ind = np.where(qdiff>0)[0][0]
-        LCL = z0[lcl_ind]
-    else:
-        LCL = 1000
-        lcl_ind = np.where(abs(LCL-z0)==np.amin(abs(LCL-z0)))[0][0]
-    
-    #IF WE HAVE SOME POSITIVE BUOYANCY, PROCEED
-    if np.nanmax(B_lif)>0:
-        #MAKE A NEW MATRIX THAT WILL ONLY CONTAIN THE POSITIVE PART OF BUOYANCY
-        B_pos = np.zeros(B_lif.shape)
-        B_pos[:] = B_lif[:]
-
-        #GET RID OF ALL NEGATIVE BUOYANCY BELOW THE LCL
-        B_pos[0:lcl_ind]=0
-        wpos = np.where(B_pos>0)[0]
-        if len(wpos)>0:
-            wpos=wpos[0] #WPOS CONTAINS INDEX OF LCL.  SET TO 0 IF THERE IS NO POSTIVE BUOYANCY
-        else:
-            wpos=lcl_ind
-        B_pos[0:wpos]=0
-        dz = z0[1:z0.shape[0]] - z0[0:z0.shape[0]-1]      
-  
-        #LFC WILL BE THE LAST INSTANCE OF NEGATIVE BUOYANCY BEFORE THE PARCEL REACHES ITS CONTINUOUS INTEcr['Rv']AL OF POSITIVE BUOY
-        mx = np.nanmax(B_lif)
-        imx = np.where(B_lif==mx)
-        imx=imx[0][0]
-        
-        fneg = np.where(B_lif<0)
-        fneg=fneg[0]
-        inn = np.where(fneg<imx)
-        
-        inn = inn[0]
-        fneg = fneg[inn]
-        if len(inn)>0:
-            LFC = 0.5*z0[np.max(fneg)] + 0.5*z0[np.max(fneg)+1]
-        else:
-            LFC = z0[start_loc]
-        
-        #EL WILL BE THE LAST INSTANCE OF POSITIVE BUOYANCY
-        fpos = np.where(B_lif>0)
-        fpos=fpos[0]
-        EL = 0.5*z0[np.max(fpos)] + 0.5*z0[np.max(fpos)+1]
-        
-        #INTIALIZE PROFILE OF SQUARED VERTICAL VELOCITY (I.E., VERTICAL KINETIC ENERGY)
-        WSQ_prof = np.zeros(B_pos.shape[0])
-        WSQ_prof[start_loc]=(V_SR**2)/2 #LOWER BOUNADRY CONDITION ON VERTICAL KE IS THE KE OF INFLOW
-        uprime_prof = np.zeros(B_pos.shape[0]) #INITIALIZE UPRIME PROFILE
-        for iz in np.arange(0, WSQ_prof.shape[0]-1, 1): #VERTICALLY INTEGRATE
-            B_on = B_pos[iz] #STORE THE CURRENT BUOYANCY
-            ebuoy_fac = 1/(1 + 2*(alpha**2)*(Radius**2)/((EL-LFC)**2 ) ) #SCALE FACTOR THAT ACCOUNTS FOR EFFECITVE BUOYANCY
-            #ns_drag = -2.5*c_d*(3/8)/Radius #COEFICIENT ON THE NON-SHEARED PART OF DRAG
-            ns_drag = -c_d*(3/8)/Radius #COEFICIENT ON THE NON-SHEARED PART OF DRAG
-            s_drag = -( c_d/Radius )*(1 - Lambda)/(Lambda**2) #COEFICIENT ON THE SHEARED PART OF DRAG
-            sh_drag = (  1/(0.5*np.sqrt(2*WSQ_prof[iz-1])) )*(3*c_d/(8*Radius)) #SHEARED DRAG TERM
-            
-            
-            if np.sqrt(2*WSQ_prof[iz-1])<1: #IF WE HAVE VERY SMALL VERTICAL VELOICTY (LESS THAN 1 M/S, WE NEED TO ZERO OUT THE SHEAR DRAG TERM OR THINGS BLOW UP)
-                sh_drag = 0
-                
-            #NOW VERTICALLY INTEGRATE THE UPRIME AND WSQ EQUATIONS TOGETHER, FOLLOWING EQ. XX AND XX IN XX RESPECTIVELY
-            uprime_prof[iz+1] = uprime_prof[iz-1] + ( z0[iz+1]-z0[iz] )*(-sh_drag*uprime_prof[iz]**2 + S[iz] )
-            WSQ_prof[iz+1] = WSQ_prof[iz] + ( z0[iz+1]-z0[iz] )*(ebuoy_fac*B_on + ns_drag*WSQ_prof[iz] + s_drag*uprime_prof[iz]*np.sqrt(2*WSQ_prof[iz]))
-          
-        #WE WILL OUTPUT THE MAXIMUM KE AS THE "CAPE" ARGUMENT                                                                                                          
-        CAPE = np.nanmax(WSQ_prof)
-        
-        #SET THE EL TO THE HEIGHT OF MAXIMUM VERTICAL VELOCITY
-        mxval = np.nanmax(WSQ_prof)
-        fnval=np.where(WSQ_prof==mxval)
-        LFC = LCL
-        if fnval[0].shape[0]>0:
             EL = z0[fnval[0][0]]
         else:
             EL = np.nan

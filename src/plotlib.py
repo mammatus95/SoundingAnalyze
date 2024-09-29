@@ -216,6 +216,7 @@ def plot_skewT(station_sounding_obj, number_str):
     ax.fill_betweenx(pres_env, tvir_env, t_parcel,  where=t_parcel > tvir_env, facecolor='red', interpolate=True, alpha=0.4)
 
     t_parcel = station_sounding_obj.ECAPE_parcel - meteolib.cr['ZEROCNK']
+    print(t_parcel.size, tvir_env.size)
 
     ax.semilogy(t_parcel, pres_env, 'm--', linewidth=2, label="ECAPE Parcel")
     ax.fill_betweenx(pres_env, tvir_env, t_parcel, where=t_parcel >= tvir_env, facecolor='red', alpha=0.2)

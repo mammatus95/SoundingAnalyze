@@ -3,8 +3,11 @@ import unittest
 import numpy as np
 # project modul
 from src.ecape_lib import omega, domega, get_qs, compute_moist_static_energy, compute_rsat, moislif
+from src.ecape_lib import compute_LCL, compute_LCL_NUMERICAL
 from src.meteolib import cr
 
+
+# ----------------------------------------------------------------------------------------------------------------------------
 
 
 class TestOmega(unittest.TestCase):
@@ -27,6 +30,8 @@ class TestOmega(unittest.TestCase):
         T, T1, T2 = -5, -10, 10
         expected_result = 0.25
         self.assertAlmostEqual(omega(T, T1, T2), expected_result)
+
+# ----------------------------------------------------------------------------------------------------------------------------
 
 
 class TestDomegaFunction(unittest.TestCase):
@@ -58,6 +63,8 @@ class TestDomegaFunction(unittest.TestCase):
         T2 = 1.0
         with self.assertRaises(ZeroDivisionError):
             domega(T, T1, T2)
+
+# ----------------------------------------------------------------------------------------------------------------------------
 
 
 class TestGetQsFunction(unittest.TestCase):
@@ -99,6 +106,7 @@ class TestGetQsFunction(unittest.TestCase):
         expected_result = -0.1
         self.assertAlmostEqual(get_qs(qt, rs), expected_result)
 
+# ----------------------------------------------------------------------------------------------------------------------------
 
 
 class TestComputeMoistStaticEnergy(unittest.TestCase):
@@ -115,6 +123,7 @@ class TestComputeMoistStaticEnergy(unittest.TestCase):
         expected_result = cr['cpl']*T_env + cr['xlv']*mr_env + cr['G']*z0
         self.assertAlmostEqual(compute_moist_static_energy(T_env, mr_env, z0), expected_result)
 
+# ----------------------------------------------------------------------------------------------------------------------------
 
 
 class TestComputeRsat(unittest.TestCase):
@@ -160,6 +169,7 @@ class TestComputeRsat(unittest.TestCase):
         with self.assertRaises(ValueError):
             compute_rsat(T, p, T1, T2, iceflag)
 
+# ----------------------------------------------------------------------------------------------------------------------------
 
 
 class TestMoislif(unittest.TestCase):
@@ -215,6 +225,73 @@ class TestMoislif(unittest.TestCase):
         with self.assertRaises(ValueError):
             moislif(T, qv, qvv, qvi, pres_env, T_env, mr_env, qt, fracent, prate, T1, T2)
     """
+
+
+# ----------------------------------------------------------------------------------------------------------------------------
+
+
+class TestComputeLCL(unittest.TestCase):
+    def test_typical_values(self):
+        T = 288.15  # K
+        qv = 0.01  # kg/kg
+        p = 101325.0  # Pa
+        Z_LCL, T_LCL, P_LCL = compute_LCL(T, qv, p)
+        self.assertAlmostEqual(Z_LCL, 103.35, places=2)
+        self.assertAlmostEqual(T_LCL, 287.15, places=2)
+        self.assertAlmostEqual(P_LCL, 100096.26, places=2)
+
+    def test_dry_condition(self):
+        T = 288.15  # K
+        qv = 0.002  # kg/kg
+        p = 101325  # Pa
+        Z_LCL, T_LCL, P_LCL = compute_LCL(T, qv, p)
+        self.assertAlmostEqual(Z_LCL, 2871.59, places=2)
+        self.assertAlmostEqual(T_LCL, 260.20, places=2)
+        self.assertAlmostEqual(P_LCL, 70854.48, places=2)
+
+
+
+class TestComputeLCLNumerical(unittest.TestCase):
+
+    def test_typical_values(self):
+        T = 288.15  # K
+        qv = 0.01  # kg/kg
+        p = 101325  # Pa
+        dz = 10  # m
+        Z_LCL = compute_LCL_NUMERICAL(T, qv, p, dz)
+        self.assertGreater(Z_LCL, 0)
+        self.assertAlmostEqual(Z_LCL, 110.0, places=2)
+
+    def test_dry_condition(self):
+        T = 288.15  # K
+        qv = 0.002  # kg/kg
+        p = 101325  # Pa
+        dz = 10  # m
+        Z_LCL = compute_LCL_NUMERICAL(T, qv, p, dz)
+        self.assertGreater(Z_LCL, 0)
+        self.assertAlmostEqual(Z_LCL, 2870.0, places=2)
+
+    """
+    def test_zero_vertical_resolution(self):
+        T = 288.15  # K
+        qv = 0.01  # kg/kg
+        p = 101325  # Pa
+        dz = 0  # m
+        with self.assertRaises(ZeroDivisionError):
+            compute_LCL_NUMERICAL(T, qv, p, dz)
+
+    def test_negative_vertical_resolution(self):
+        T = 288.15  # K
+        qv = 0.01  # kg/kg
+        p = 101325  # Pa
+        dz = -10  # m
+        with self.assertRaises(ValueError):
+            compute_LCL_NUMERICAL(T, qv, p, dz)
+    """
+
+
+# ----------------------------------------------------------------------------------------------------------------------------
+
 
 if __name__ == '__main__':
     unittest.main()
