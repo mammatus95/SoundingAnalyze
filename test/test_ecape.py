@@ -37,32 +37,39 @@ class TestOmega(unittest.TestCase):
 class TestDomegaFunction(unittest.TestCase):
 
     def test_domega_within_range(self):
-        T = 0.5
-        T1 = 0.0
-        T2 = 1.0
-        expected_result = -1.0
+        T = 270.0
+        T1 = 273.15
+        T2 = 253.15
+        expected_result = -0.05
         self.assertAlmostEqual(domega(T, T1, T2), expected_result)
 
-    def test_domega_less_than_T1(self):
-        T = -1.0
-        T1 = 0.0
-        T2 = 1.0
+    def test_domega_less_than_T2(self):
+        T = 240.0
+        T1 = 273.15
+        T2 = 253.15
         expected_result = 0.0
         self.assertAlmostEqual(domega(T, T1, T2), expected_result)
 
-    def test_domega_greater_than_T2(self):
-        T = 2.0
-        T1 = 0.0
-        T2 = 1.0
+    def test_domega_greater_than_T1(self):
+        T = 300.0
+        T1 = 273.15
+        T2 = 253.15
         expected_result = 0.0
         self.assertAlmostEqual(domega(T, T1, T2), expected_result)
 
     def test_domega_T1_equal_T2(self):
-        T = 0.5
-        T1 = 1.0
-        T2 = 1.0
+        T = 260.5
+        T1 = 273.15
+        T2 = 273.15
         with self.assertRaises(ZeroDivisionError):
             domega(T, T1, T2)
+        
+    def test_realistic_domega(self):
+        T = 260.0
+        T1 = 273.15
+        T2 = 253.15
+        expected_result = -0.05
+        self.assertAlmostEqual(domega(T, T1, T2), expected_result)
 
 # ----------------------------------------------------------------------------------------------------------------------------
 

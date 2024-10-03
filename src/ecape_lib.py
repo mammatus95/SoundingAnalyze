@@ -24,14 +24,47 @@ from src.meteolib import cr
 # beginning of section 2e in Peters et al. 2022)
 
 def omega(T, T1, T2):
-    return ((T - T1)/(T2-T1))*np.heaviside((T - T1)/(T2-T1), 1)*np.heaviside((1 - (T - T1)/(T2-T1)), 1) + np.heaviside(-(1 - (T - T1)/(T2-T1)), 1)
-
+    normalized_T = (T - T1) / (T2 - T1)
+    return np.clip(normalized_T, 0, 1)
 
 def domega(T, T1, T2):
+    """
+    Compute the derivative of the discriminator function omega(T, T1, T2).
+
+    - When T < T1, both heaviside functions are 1, so the result is 0.
+    - When T1 <= T < T2, the first heaviside function (T1 - T) is 0 and the second (T2 - T) is 1, so the result is -1.
+    - When T >= T2, both heaviside functions are 0, so the result is 0.
+
+    Parameters
+    ----------
+    T : numpy.ndarray
+        Temperature in K
+    T1 : float
+        Warmest mixed-phase temperature
+    T2 : float
+        Coldest mixed-phase temperature
+
+    Returns
+    -------
+    d_omega : numpy.ndarray
+        Derivative of omega with respect to T
+
+    Notes
+    -----
+    The derivative is computed using the Heaviside step function, which is
+    zero for T < T1 and T > T2, and one for T1 <= T <= T2.  The derivative
+    is then computed as the difference of the Heaviside functions divided by
+    T2-T1.  This is a simple approximation, which should be sufficient for
+    most purposes.  If a more accurate derivative is needed, it should be
+    computed numerically using a more sophisticated method.
+    """
     # T1 equal to T2 should raise a ZeroDivisionError due to rounding errors (probably not intended by author)
+
     if T1 == T2:
-        raise ZeroDivisionError
-    return (np.heaviside(T1-T, 1) - np.heaviside(T2-T, 1))/(T2-T1)
+        raise ZeroDivisionError("T1 is equal T2")
+    
+    mask = (T2 <= T) & (T <= T1)
+    return np.where(mask, 1/(T2 - T1), 0)
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
@@ -413,9 +446,9 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
         Qt_lif[0] = Qv_lif[0]
 
 
-    q_sat_prev=0
+    q_sat_prev = 0
     B_run = 0
-    iz=start_loc
+    iz = start_loc
 
     #
     #for iz in np.arange(start_loc+1, z0.shape[0]):
@@ -427,7 +460,7 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     # THE +25 PART IN THE WHILE STATEMENT IS A PAD ON B_RUN (THE NEGATIVE CAPE HAS TO BE 25 J/KG LESS THAN THE POSITIVE CAPE TO KILL THE LOOP)
     # while iz<(z0.shape[0])-1 and (z0[iz]<z0[mn_hgt] or (B_run+25)>0):
     # while iz<(z0.shape[0])-1:
-    while iz<(z0.shape[0])-1 and (z0[iz]<z0[mn_hgt] or (B_run+250)>0):
+    while iz < (z0.shape[0])-1 and (z0[iz] < z0[mn_hgt] or (B_run+250) > 0):
         iz = iz + 1
         q_sat=(1-Qt_lif[iz-1])*compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 1)
         if Qv_lif[iz-1]<q_sat: # if we are unsaturated, go up at the unsaturated adiabatic lapse rate (eq. 19 in Peters et al. 2022)
@@ -439,21 +472,20 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
             Qt_lif[iz] = Qv_lif[iz]
             q_sat = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
             
-            if Qv_lif[iz]>=q_sat: # if we hit saturation, split the vertical step into two stages.  The first stage advances at the saturated lapse rate to the saturation point, and the second stage completes the grid step at the moist lapse rate
-                OMEGA = omega(T_lif[iz-1], T1, T2)
-                dOMEGA = domega(T_lif[iz-1], T1, T2)
-                satrat=(Qv_lif[iz]-q_sat_prev)/(q_sat-q_sat_prev)
-                dz_dry=satrat*(z0[iz]-z0[iz-1])
-                dz_wet=(1-satrat)*(z0[iz]-z0[iz-1])
+            if Qv_lif[iz] >= q_sat: # if we hit saturation, split the vertical step into two stages.  The first stage advances at the saturated lapse rate to the saturation point, and the second stage completes the grid step at the moist lapse rate
+
+                satrat = (Qv_lif[iz]-q_sat_prev)/(q_sat-q_sat_prev)
+                dz_dry = satrat*(z0[iz]-z0[iz-1])
+                dz_wet = (1-satrat)*(z0[iz]-z0[iz-1])
 
 
                 
                 T_halfstep = T_lif[iz-1] + dz_dry*drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
                 Qv_halfstep = Qv_lif[iz-1] - dz_dry*fracent*( Qv_lif[iz-1] - q0[iz-1] )
                 Qt_halfstep = Qv_lif[iz]
-                p_halfstep=p0[iz-1]*satrat + p0[iz]*(1-satrat)
-                T0_halfstep=T0[iz-1]*satrat + T0[iz]*(1-satrat)
-                Q0_halfstep=q0[iz-1]*satrat + q0[iz]*(1-satrat)
+                p_halfstep = p0[iz-1]*satrat + p0[iz]*(1-satrat)
+                T0_halfstep = T0[iz-1]*satrat + T0[iz]*(1-satrat)
+                Q0_halfstep = q0[iz-1]*satrat + q0[iz]*(1-satrat)
 
                 T_lif[iz] = T_halfstep + dz_wet*moislif(T_halfstep, Qv_halfstep, (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
                 
@@ -461,26 +493,23 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
                 Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1])*fracent*( Qt_halfstep - Q0_halfstep )
                 Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
 
-                if Qt_lif[iz]<Qv_lif[iz]:
-                    Qv_lif[iz]=Qt_lif[iz]
+                if Qt_lif[iz] < Qv_lif[iz]:
+                    Qv_lif[iz] = Qt_lif[iz]
 
             q_sat_prev = q_sat
             
-        else: #if we are already at saturation, just advance upwacr['Rd'] using the saturated lapse rate (eq. 24 in Peters et al. 2022)
-            OMEGA = omega(T_lif[iz-1], T1, T2)
-            dOMEGA = domega(T_lif[iz-1], T1, T2)
-
+        else: # if we are already at saturation, just advance upwacr['Rd'] using the saturated lapse rate (eq. 24 in Peters et al. 2022)
             T_lif[iz] = T_lif[iz-1] + (z0[iz] - z0[iz-1]) \
                         * moislif(T_lif[iz-1], Qv_lif[iz-1], (1-Qt_lif[iz-1]) \
-                        *compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 0), (1-Qt_lif[iz-1])\
-                        *compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 2), p0[iz-1], T0[iz-1], q0[iz-1], Qt_lif[iz-1], fracent, prate, T1, T2)
+                        * compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 0), (1-Qt_lif[iz-1])\
+                        * compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 2), p0[iz-1], T0[iz-1], q0[iz-1], Qt_lif[iz-1], fracent, prate, T1, T2)
                      
              
             Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1])*(fracent*( Qt_lif[iz-1] - q0[iz-1] )  + prate*( Qt_lif[iz-1]-Qv_lif[iz-1]) )
-            Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
+            Qv_lif[iz] = (1-Qt_lif[iz]) * compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
             
-            if Qt_lif[iz]<Qv_lif[iz]:
-                Qv_lif[iz]=Qt_lif[iz]
+            if Qt_lif[iz] < Qv_lif[iz]:
+                Qv_lif[iz] = Qt_lif[iz]
 
         B_run = B_run + (cr['G']*T_lif[iz]*(1 + (cr['Rv']/cr['Rd'])*Qv_lif[iz] - Qt_lif[iz])/(T0[iz]*(1 + (cr['Rv']/cr['Rd'])*q0[iz] - q0[iz])) - cr['G'])*(z0[iz]-z0[iz-1])
 
@@ -489,7 +518,7 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     # T_rho_lif=T_lif*(1 - Qt_lif + Qv_lif)/( 1 + (epsilon - 1)/( ( epsilon*(1 - Qt_lif)/Qv_lif - 1) ) )
     # T_0_lif=T0/( 1 + (epsilon - 1)/( ( epsilon*(1 - q0)/q0 - 1) ) )
     
-    B_lif=cr['G']*(T_rho_lif - T_0_lif)/T_0_lif
+    B_lif = cr['G'] * (T_rho_lif - T_0_lif)/T_0_lif
     
     
     return T_lif, Qv_lif, Qt_lif, B_lif
