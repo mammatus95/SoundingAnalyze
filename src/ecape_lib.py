@@ -150,35 +150,34 @@ def compute_rsat(T, p, T1, T2, iceflag=0):
     .. [1]  https://doi-org.ezaccess.libraries.psu.edu/10.1175/JAS-D-21-0118.1
 
     """
-
-    omeg = omega(T, T1, T2)
-    epsilon = cr['Rd']/cr['Rv']
     
+    epsilon = cr['Rd']/cr['Rv']
+
     if iceflag == 0:
         term1 = (cr['cpv']-cr['cpl'])/cr['Rv']
         term2 = (cr['xlv']-cr['ttrip']*(cr['cpv']-cr['cpl']))/cr['Rv']
-        esl = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**(term1)
-        qsat = epsilon*esl/(p-esl)
+        esl_l = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
+        return epsilon*esl_l/(p-esl_l)
     elif iceflag == 1: # give linear combination of mixing ratio with respect to liquid and ice (eq. 20 in Peters et al. 2022)
+        omeg = omega(T, T1, T2)
+
         term1 = (cr['cpv']-cr['cpl'])/cr['Rv']
         term2 = (cr['xlv']-cr['ttrip']*(cr['cpv']-cr['cpl']))/cr['Rv']
-        esl_l = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**(term1)
+        esl_l = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
         qsat_l = epsilon*esl_l/(p-esl_l)
-        term1 = (cr['cpv']-cr['cpl'])/cr['Rv']
-        term2 = (cr['xls']-cr['ttrip']*(cr['cpv']-cr['cpl']))/cr['Rv']
-        esl_i = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**(term1)
+        term1 = (cr['cpv']-cr['cpi'])/cr['Rv']
+        term2 = (cr['xls']-cr['ttrip']*(cr['cpv']-cr['cpi']))/cr['Rv']
+        esl_i = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
         qsat_i = epsilon*esl_i/(p-esl_i)
-        qsat = (1-omeg)*qsat_l + (omeg)*qsat_i
+        return (1-omeg)*qsat_l + (omeg)*qsat_i
     elif iceflag == 2: # only give mixing ratio with respect to ice
         term1 = (cr['cpv']-cr['cpi'])/cr['Rv']
         term2 = (cr['xls']-cr['ttrip']*(cr['cpv']-cr['cpi']))/cr['Rv']
-        esl = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**(term1)
-        esl = min( esl , p*0.5 )
-        qsat = epsilon*esl/(p-esl)
+        esl_i = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
+        esl_i = min(esl_i, p*0.5)
+        return epsilon*esl_i/(p-esl_i)
     else:
         raise ValueError("iceflag must be 0, 1, or 2!")
-    return qsat
-
 
 # ----------------------------------------------------------------------------------------------------------------------------
 # lapse rate for an unsaturated parcel
@@ -352,8 +351,8 @@ def moislif(T, qv, qvv, qvi, p0, T0, q0, qt, fracent, prate, T1, T2):
     Rm0 = (1 - q0)*cr['Rd'] + q0*cr['Rv']
     
 
-    T_rho=T*(1 - qt + qv/epsilon)
-    T_rho0=T0*( 1 - q0 + q0/epsilon )
+    T_rho = T*(1 - qt + qv/epsilon)
+    T_rho0 = T0*( 1 - q0 + q0/epsilon )
     B = cr['G']*(T_rho - T_rho0)/(T_rho0)
     
     Qvsl = qvv/( epsilon - epsilon*qt + qv)
@@ -467,30 +466,33 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
             
         
         
-            T_lif[iz] = T_lif[iz-1] + (z0[iz] - z0[iz-1])*drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
-            Qv_lif[iz] = Qv_lif[iz-1] - (z0[iz] - z0[iz-1])*fracent*( Qv_lif[iz-1] - q0[iz-1] )
+            T_lif[iz] = T_lif[iz-1] + (z0[iz] - z0[iz-1]) * drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
+            Qv_lif[iz] = Qv_lif[iz-1] - (z0[iz] - z0[iz-1]) * fracent * (Qv_lif[iz-1] - q0[iz-1])
             Qt_lif[iz] = Qv_lif[iz]
-            q_sat = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
+            q_sat = (1 - Qt_lif[iz]) * compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
             
             if Qv_lif[iz] >= q_sat: # if we hit saturation, split the vertical step into two stages.  The first stage advances at the saturated lapse rate to the saturation point, and the second stage completes the grid step at the moist lapse rate
 
-                satrat = (Qv_lif[iz]-q_sat_prev)/(q_sat-q_sat_prev)
-                dz_dry = satrat*(z0[iz]-z0[iz-1])
-                dz_wet = (1-satrat)*(z0[iz]-z0[iz-1])
+                satrat = (Qv_lif[iz] - q_sat_prev)/(q_sat - q_sat_prev)
+                dz_dry = satrat * (z0[iz] - z0[iz-1])
+                dz_wet = (1-satrat) * (z0[iz] - z0[iz-1])
 
 
                 
-                T_halfstep = T_lif[iz-1] + dz_dry*drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
-                Qv_halfstep = Qv_lif[iz-1] - dz_dry*fracent*( Qv_lif[iz-1] - q0[iz-1] )
+                T_halfstep = T_lif[iz-1] + dz_dry * drylift(T_lif[iz-1], Qv_lif[iz-1], T0[iz-1], q0[iz-1], fracent)
+                Qv_halfstep = Qv_lif[iz-1] - dz_dry * fracent * (Qv_lif[iz-1] - q0[iz-1])
                 Qt_halfstep = Qv_lif[iz]
-                p_halfstep = p0[iz-1]*satrat + p0[iz]*(1-satrat)
-                T0_halfstep = T0[iz-1]*satrat + T0[iz]*(1-satrat)
-                Q0_halfstep = q0[iz-1]*satrat + q0[iz]*(1-satrat)
+                p_halfstep = p0[iz-1]*satrat + p0[iz] * (1-satrat)
+                T0_halfstep = T0[iz-1]*satrat + T0[iz] * (1-satrat)
+                Q0_halfstep = q0[iz-1]*satrat + q0[iz] * (1-satrat)
 
-                T_lif[iz] = T_halfstep + dz_wet*moislif(T_halfstep, Qv_halfstep, (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep)*compute_rsat(T_halfstep, p_halfstep, T1, T2, 2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
+                T_lif[iz] = T_halfstep + dz_wet \
+                            * moislif(T_halfstep, Qv_halfstep, (1-Qt_halfstep) \
+                            *compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep) \
+                            *compute_rsat(T_halfstep, p_halfstep, T1, T2, 2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
                 
                 
-                Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1])*fracent*( Qt_halfstep - Q0_halfstep )
+                Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1]) * fracent * (Qt_halfstep - Q0_halfstep)
                 Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
 
                 if Qt_lif[iz] < Qv_lif[iz]:

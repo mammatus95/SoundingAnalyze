@@ -10,7 +10,7 @@ import time
 
 from src.meteolib import cr, temp_at_mixrat, q_to_mixrat
 from src.cm1_lib import read_modelsounding, interpolating_sounding, calculate_density_potential_temperature
-from src.cm1_lib import calculate_PII, calculate_pressure, calculate_temperature_density, calculate_density, calculate_temperature
+from src.cm1_lib import calculate_PII, calculate_pressure, calculate_temperature  # calculate_temperature_density, calculate_density
 from src.ecape_lib import CI_model, compute_CAPE_AND_CIN, compute_w, compute_NCAPE, compute_VSR, compute_ETILDE
 from src.ecape_lib import lift_parcel_adiabatic
 from src.plotlib import plot_stuve_cm1
@@ -70,8 +70,8 @@ def main():
     # print results
     print(f"CAPE: {CAPE} CIN: {CIN} LFC: {LFC} EL: {EL}")
     print(f"ECAPE: {ECAPE} ECIN: {ECIN} ELFC: {ELFC} EEL: {EEL}")
-    print(f"time elapsed: {(end - start):.2f} sec") # in seconds
-
+    print(f"time elapsed: {(end - start)*1000:.3f} ms") # in milliseconds
+    #exit(0)
 
     WCAPE, WCIN, WLFC, WEL = compute_w(T_env, pres_env, qv_env, 0, 0, 0, z_env, T1, T2, 1000, u_env, v_env, V_SR)
 

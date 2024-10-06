@@ -11,51 +11,57 @@ from src.meteolib import cr
 
 
 class TestOmega(unittest.TestCase):
+    def setUp(self):
+        self.T1 = 273.15
+        self.T2 = 253.15
+
     def test_omega_1(self):
-        T, T1, T2 = 0, -10, 10
+        T = 263.15
         expected_result = 0.5
-        self.assertAlmostEqual(omega(T, T1, T2), expected_result)
+        self.assertAlmostEqual(omega(T, self.T1, self.T2), expected_result)
 
     def test_omega_2(self):
-        T, T1, T2 = 5, -10, 10
-        expected_result = 0.75
-        self.assertAlmostEqual(omega(T, T1, T2), expected_result)
+        T = 268.15
+        expected_result = 0.25
+        self.assertAlmostEqual(omega(T, self.T1, self.T2), expected_result)
 
     def test_omega_3(self):
-        T, T1, T2 = 15, -10, 10
-        expected_result = 1
-        self.assertAlmostEqual(omega(T, T1, T2), expected_result)
+        T = 258.15
+        expected_result = 0.75
+        self.assertAlmostEqual(omega(T, self.T1, self.T2), expected_result)
 
     def test_omega_4(self):
-        T, T1, T2 = -5, -10, 10
-        expected_result = 0.25
-        self.assertAlmostEqual(omega(T, T1, T2), expected_result)
+        T = 253.15
+        expected_result = 1.0
+        self.assertAlmostEqual(omega(T, self.T1, self.T2), expected_result)
+
+    def test_omega_5(self):
+        T = 303.15
+        expected_result = 0.0
+        self.assertAlmostEqual(omega(T, self.T1, self.T2), expected_result)
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
 
 class TestDomegaFunction(unittest.TestCase):
+    def setUp(self):
+        self.T1 = 273.15
+        self.T2 = 253.15
 
     def test_domega_within_range(self):
         T = 270.0
-        T1 = 273.15
-        T2 = 253.15
         expected_result = -0.05
-        self.assertAlmostEqual(domega(T, T1, T2), expected_result)
+        self.assertAlmostEqual(domega(T, self.T1, self.T2), expected_result)
 
     def test_domega_less_than_T2(self):
         T = 240.0
-        T1 = 273.15
-        T2 = 253.15
         expected_result = 0.0
-        self.assertAlmostEqual(domega(T, T1, T2), expected_result)
+        self.assertAlmostEqual(domega(T, self.T1, self.T2), expected_result)
 
     def test_domega_greater_than_T1(self):
         T = 300.0
-        T1 = 273.15
-        T2 = 253.15
         expected_result = 0.0
-        self.assertAlmostEqual(domega(T, T1, T2), expected_result)
+        self.assertAlmostEqual(domega(T, self.T1, self.T2), expected_result)
 
     def test_domega_T1_equal_T2(self):
         T = 260.5
@@ -66,10 +72,8 @@ class TestDomegaFunction(unittest.TestCase):
         
     def test_realistic_domega(self):
         T = 260.0
-        T1 = 273.15
-        T2 = 253.15
         expected_result = -0.05
-        self.assertAlmostEqual(domega(T, T1, T2), expected_result)
+        self.assertAlmostEqual(domega(T, self.T1, self.T2), expected_result)
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
@@ -139,42 +143,38 @@ class TestComputeRsat(unittest.TestCase):
         # cpl 4190.0 4218.0 4186.0 J/kg/K   liquid water specific heat capacity
         cr  = {'Rd': 287.05, 'Rv': 461.51, 'cpv': 1875.0, 'cpl': 4186.0, 'cpi': 1840.0, 'xlv': 2.5e6, 'xls': 2.834e6, 'ttrip': 273.16, 'eref': 611.73, 'G': 9.81}
         self.cr = cr
+        self.T1 = 273.15
+        self.T2 = 253.15
 
     def test_compute_rsat_liquid(self):
         T = 300.0
         p = 100000.0
-        T1 = 250.0
-        T2 = 350.0
         iceflag = 0
-        qsat = compute_rsat(T, p, T1, T2, iceflag)
+        expected_result = 0.022780664040943
+        qsat = compute_rsat(T, p, self.T1, self.T2, iceflag)
         self.assertGreater(qsat, 0.0)
+        self.assertAlmostEqual(qsat, expected_result)
 
     def test_compute_rsat_linear_combination(self):
         T = 300.0
         p = 100000.0
-        T1 = 250.0
-        T2 = 350.0
         iceflag = 1
-        qsat = compute_rsat(T, p, T1, T2, iceflag)
+        qsat = compute_rsat(T, p, self.T1, self.T2, iceflag)
         self.assertGreater(qsat, 0.0)
 
     def test_compute_rsat_ice_only(self):
         T = 250.0
         p = 100000.0
-        T1 = 200.0
-        T2 = 300.0
         iceflag = 2
-        qsat = compute_rsat(T, p, T1, T2, iceflag)
+        qsat = compute_rsat(T, p, self.T1, self.T2, iceflag)
         self.assertGreater(qsat, 0.0)
 
     def test_compute_rsat_invalid_iceflag(self):
         T = 300.0
         p = 100000.0
-        T1 = 250.0
-        T2 = 350.0
         iceflag = 3
         with self.assertRaises(ValueError):
-            compute_rsat(T, p, T1, T2, iceflag)
+            compute_rsat(T, p, self.T1, self.T2, iceflag)
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
