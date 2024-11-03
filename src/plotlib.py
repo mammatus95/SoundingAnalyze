@@ -16,7 +16,7 @@ import numpy as np
 from src.utilitylib import station_number2string
 import src.meteolib as meteolib
 from src.skewT import SkewXAxes
-
+from src.meteolib import cr
 # ---------------------------------------------------------------------------------------------------------------------
 
 def add_adiabatic(ax, pmax=1000, pmin=100, dp=-10):
@@ -27,12 +27,12 @@ def add_adiabatic(ax, pmax=1000, pmin=100, dp=-10):
     for t in np.array([-40, -30, -20, -10, 0, 5, 10, 15, 20, 25, 30, 35, 40]):
         tw = []
         for p in presvals:
-            tw.append(meteolib.wetlift(1000., t, p))
+            tw.append(meteolib.wetlift(1000., t + meteolib.cr['ZEROCNK'], p) - meteolib.cr['ZEROCNK'])
         ax.semilogy(tw, presvals, 'b--', lw=0.5, alpha=0.7)
 
     # plot dry adiabats
     for t in np.array([-80, -60, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 70, 90, 110, 130, 150, 170, 190, 210, 230]):
-        ax.semilogy(meteolib.thetas(t, presvals), presvals, 'r--', lw=0.5, alpha=0.7)
+        ax.semilogy(meteolib.thetas(t + meteolib.cr['ZEROCNK'], presvals) - meteolib.cr['ZEROCNK'], presvals, 'r--', lw=0.5, alpha=0.7)
 
     # plot lines of mixing ratio
     pmin = 400
@@ -65,6 +65,37 @@ def create_stuve():
     plt.ylabel("Druck [hPa]")
     return fig, ax
 
+def plot_stuve_cm1(t_env, td_env, pres_env, T_lift, Qv_lift, Qt_lift, T_lif_ecape, Qv_lif_ecape, Qt_lif_ecape):
+    _, ax = create_stuve()
+
+    ax = add_adiabatic(ax)
+
+    # plot souding datas
+    ax.plot(t_env, pres_env/100, '-b', lw=1.5, label="Temperature")
+    ax.plot(td_env, pres_env/100, '-g', lw=1.5, label="Dewpoint")
+
+    # plot lifted parcel
+    T_rho = T_lift*(1 + (cr['Rv']/cr['Rd'])*Qv_lift - Qt_lift)
+    T_rho = T_rho - cr['ZEROCNK']
+    ax.plot(T_rho, pres_env/100, 'r--', linewidth=2, label="CAPE Parcel")
+
+    # plot lifted parcel
+    T_rho = T_lif_ecape*(1 + (cr['Rv']/cr['Rd'])*Qv_lif_ecape - Qt_lif_ecape)
+    T_rho = T_rho - cr['ZEROCNK']
+    ax.plot(T_rho, pres_env/100, 'm--', linewidth=2, label="ECAPE Parcel")
+
+    plt.yscale('log')
+
+    ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax.set_yticks(np.linspace(100, 1000, 10))
+    ax.set_ylim(1020, 100)
+    ax.set_xticks(np.arange(-80, 40, 10))
+    ax.set_xlim(-80, 40)
+
+    plt.legend()
+
+    plt.savefig(f"ecape.png")
+    plt.close()
 
 def plot_stuve(station_sounding_obj, number_str):
     _, ax = create_stuve()
@@ -82,11 +113,17 @@ def plot_stuve(station_sounding_obj, number_str):
 
     t_parcel = station_sounding_obj.SB_parcel - meteolib.cr['ZEROCNK']
 
-    ax.plot(t_parcel, pres_env, '-r', lw=1.8)
+    ax.plot(t_parcel, pres_env, '-r', lw=1.8, label="SB CAPE Parcel")
 
     if station_sounding_obj.SB_CAPE > 10:
         ax.fill_betweenx(pres_env, tvir_env, t_parcel, where=t_parcel >= tvir_env, facecolor='red', alpha=0.4)
 
+    t_parcel = station_sounding_obj.ECAPE_parcel - meteolib.cr['ZEROCNK']
+
+    ax.plot(t_parcel, pres_env, 'm--', linewidth=2, label="ECAPE Parcel")
+    if station_sounding_obj.ECAPE > 10:
+        ax.fill_betweenx(pres_env, tvir_env, t_parcel, where=t_parcel >= tvir_env, facecolor='red', alpha=0.2)
+    
     plt.yscale('log')
 
     ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
@@ -100,7 +137,7 @@ def plot_stuve(station_sounding_obj, number_str):
 
     # wind bars
     anzahl_bar = 45
-    anzahl = (np.where(station_sounding_obj.pres_env==100))[0][0]
+    anzahl = (np.where(station_sounding_obj.pres_env <= 100))[0][0]
     iter_bar = int(anzahl/anzahl_bar)
     x_value = np.zeros(np.size(station_sounding_obj.pres_env[:anzahl:iter_bar])) + 45
     ax.barbs(x_value, station_sounding_obj.pres_env[:anzahl:iter_bar],
@@ -109,7 +146,8 @@ def plot_stuve(station_sounding_obj, number_str):
              length=8, pivot='middle', barb_increments=dict(half=2.5, full=5, flag=25))
 
     ax.set_title(f"{station_number2string(number_str)}", fontsize=18)
-    plt.savefig(f"{station_number2string(number_str)}_thermo.png")
+    plt.legend()
+    plt.savefig(f"{station_number2string(number_str)}_stuve.png")
     plt.close()
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -176,6 +214,12 @@ def plot_skewT(station_sounding_obj, number_str):
     t_parcel = station_sounding_obj.SB_parcel - meteolib.cr['ZEROCNK']
     ax.semilogy(t_parcel, pres_env, '-r', lw=1.4)
     ax.fill_betweenx(pres_env, tvir_env, t_parcel,  where=t_parcel > tvir_env, facecolor='red', interpolate=True, alpha=0.4)
+
+    t_parcel = station_sounding_obj.ECAPE_parcel - meteolib.cr['ZEROCNK']
+    print(t_parcel.size, tvir_env.size)
+
+    ax.semilogy(t_parcel, pres_env, 'm--', linewidth=2, label="ECAPE Parcel")
+    ax.fill_betweenx(pres_env, tvir_env, t_parcel, where=t_parcel >= tvir_env, facecolor='red', alpha=0.2)
 
     # Disables the log-formatting that comes with semilogy
     ax.yaxis.set_major_formatter(plt.ScalarFormatter())
@@ -265,6 +309,8 @@ def plot_skewT(station_sounding_obj, number_str):
 
     #fig.text(x_value, 0.30, "ML CAPE : %.1f J/kg" % (2843.2))
     fig.text(x_value, 0.27, "SB CAPE : %.1f J/kg" % (station_sounding_obj.get_sb_cape()))
+    fig.text(x_value, 0.24, "ECAPE   : %.1f J/kg" % (station_sounding_obj.ECAPE))
+
     #fig.text(x_value, 0.24, "BRN ML : %.1f" % (brn))
     wmaxshr = station_sounding_obj.get_wmaxshear()
     if (wmaxshr >= 1000.0):

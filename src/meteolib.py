@@ -2,10 +2,10 @@
 import math
 import numpy as np
 
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 # Source for the most functions are sharppy
 
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 # meteorology constants
 
 cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvins
@@ -13,12 +13,14 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'Rv': 461.5,                             # J/kg/K   water vapor gas constant
       'cpd': 1005.7,                           # J/kg/K   isobaric dry air specific heat capacit
       'cpv': 1850.0,   # 1870                  # J/kg/K   water vapor specific heat capacity (isobaric),
-      'cl': 4218.0,    # cpl 4190              # J/kg/K   liquid water specific heat capacity
-      'cpi': 2106.0,                           # J/kg/K   liquid water specific heat capacity
+      'cpl': 4218.0,   # cpl 4190              # J/kg/K   liquid water specific heat capacity
+      'cpi': 2106.0,                           # J/kg/K   ice specific heat capacity
       'eps': 0.62197,                          # dimless  molecular weight ratio
       'ROCP': 0.28571426,                      # dimless  R over Cp
       'Lref': 2.5*1e6,                         # J/kg     latent heat of condensation at reference conditions
-      'pref': 611.65,                          # Pa       partial pressure of water vapor a triple point temp
+      'xlv': 2501000,                          # J/kg     reference latent heat of vaporization at the triple point temperature
+      'xls': 2834000,                          # J/kg     reference latent heat of sublimation at the triple point temperature
+      'eref': 611.65,   # 611.2                # Pa       partial pressure of water vapor a triple point temp
       'ttrip': 273.15,                         # K        triple point temp
       'G': 9.80665,                            # m/(s*s)  Gravity
       'Re': 6371008.767,                       # m        earth radius
@@ -34,9 +36,9 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'Pi': math.pi,                           # Pi
       'e': 2.71828,                            # Euler Zahl
       'Pas2hPah': 36,                          # Pa/s to hPa/h
-      'ksq': 0.18,                             # VON KARMAN CONSTANT
-      'Pr': 1/3,                               # PRANDTL NUMBER
-      'Lm': 250,                               # HORIZONTAL MIXING LENGTH
+      'ksq': 0.18,                             # von Karman constant
+      'Pr': 1/3,                               # Prandtl number
+      'Lm': 250,                               # horizontal mixing Length
       'c1': 0.0498646455,
       'c2': 2.4082965,
       'c3': 7.07475,
@@ -44,8 +46,7 @@ cr = {'ZEROCNK': 273.15,                       # K        Zero Celsius in Kelvin
       'c5': 0.0915,
       'c6': 1.2035
       }
-
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 
 
 def virtuelle(q, t):
@@ -94,6 +95,7 @@ def temp_at_mixrat(w, p):
     -------
     Temperature (C) of air at given mixing ratio and pressure
     '''
+
     x = np.log10(w * p / (622. + w))
     x = (np.power(10., ((cr['c1'] * x) + cr['c2'])) - cr['c3'] +
          (cr['c4'] * np.power((np.power(10, (cr['c5'] * x)) - cr['c6']), 2))) - cr['ZEROCNK']
@@ -224,10 +226,11 @@ def potlvl(theta, temp, p0=1000.):
     Pressure Level (hPa [float]) of the parcel
 
     Cp (ln T - ln T0) = R (ln p - ln p0)
-    Cp/R ln(T0/T) = p0/p |T0 = Theata
-    p = p0 / (T0/T)^Cp/R
+    Cp/R ln(T/T0) = ln(p/p0) |T0 = Theata
+    p/p0 = (T/T0)^Cp/R
+    p = p0 / (T/T0)^Cp/R
     '''
-    thalvl = p0 / (pow((theta / temp), (1/cr['ROCP'])))
+    thalvl = p0 / (pow((theta / temp), (1./cr['ROCP'])))
     return thalvl
 
 
@@ -238,8 +241,12 @@ def thetas(theta, presvals, p0=1000.):
     Returns
     -------
     Temperature in K as numpy.array
+
+    Cp (ln T - ln T0) = R (ln p - ln p0)
+    Cp/R ln(T/T0) = ln(p/p0)
+    T = T0 * (p/p0)^R/Cp    
     '''
-    return (theta / (np.power((p0 / presvals), cr['ROCP'])))
+    return (theta * np.power(presvals/p0, cr['ROCP']))
 
 
 def drylift(p, t, td):
@@ -310,7 +317,7 @@ def thetae(p, t, q, p0=1000.):
     """
     return (t + ((2.501*1000000)/1004)*q) * np.power((p0/p), cr['ROCP'])
 
-# ---------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------
 
 
 def uvwind(winddir, wind_speed):
@@ -318,22 +325,27 @@ def uvwind(winddir, wind_speed):
     This function convert wind speed and direction in to u,v component.
     The Winddirection is given in degree,
     """
-
+    winddir, wind_speed = np.abs(winddir), np.abs(wind_speed)
     u = (-1) * np.multiply(wind_speed, np.sin(np.radians(winddir)))
     v = (-1) * np.multiply(wind_speed, np.cos(np.radians(winddir)))
     return u, v
 
 
 def uv2spddir(u, v):
-
     direction = np.rad2deg(np.arctan2(-u, -v))
-
     if isinstance(direction, np.ndarray):
         direction = np.remainder(direction + 360, 360)
     else:
         direction = (direction + 360) % 360
 
-    return (direction, np.sqrt(u*u + v*v))
+    wind_speed = np.sqrt(np.square(u) + np.square(v))
+    if type(wind_speed) is not np.ndarray:
+        if wind_speed == 0:
+            direction = np.nan
+    else:
+        direction[np.where(wind_speed == 0)] = np.nan
+
+    return (direction, wind_speed)
 
 
 def mean_wind(u, v, ps, stu=0.0, stv=0.0):
