@@ -135,7 +135,7 @@ def satlift(p, thetam):
     e2, t2 = np.nan, np.nan
     while np.fabs(eor) - 0.1 > 0:
         if eor == 999:                  # First Pass
-            pwrp = np.power((p / 1000.), cr['ROCP'])
+            pwrp = np.power((p / 1000.), cr['kappa'])
             t1 = (thetam + cr['ZEROCNK']) * pwrp - cr['ZEROCNK']
             e1 = wobf(t1) - wobf(thetam)
             rate = 1
@@ -162,7 +162,7 @@ def thalvl(theta, t):
     -------
     Pressure level in hPa
     '''
-    return 1000. / (np.power((theta / t), (1./cr['ROCP'])))
+    return 1000. / (np.power((theta / t), (1./cr['kappa'])))
 
 
 def theta(pres, temp, p0=1000.):
@@ -176,7 +176,7 @@ def theta(pres, temp, p0=1000.):
     -------
     Potential temperature in K
     '''
-    return (temp * np.power((p0 / pres), cr['ROCP']))
+    return (temp * np.power((p0 / pres), cr['kappa']))
 
 
 def potlvl(theta, temp, p0=1000.):
@@ -195,7 +195,7 @@ def potlvl(theta, temp, p0=1000.):
     p/p0 = (T/T0)^Cp/R
     p = p0 / (T/T0)^Cp/R
     '''
-    thalvl = p0 / (pow((theta / temp), (1./cr['ROCP'])))
+    thalvl = p0 / (pow((theta / temp), (1./cr['kappa'])))
     return thalvl
 
 
@@ -211,7 +211,7 @@ def thetas(theta, presvals, p0=1000.):
     Cp/R ln(T/T0) = ln(p/p0)
     T = T0 * (p/p0)^R/Cp    
     '''
-    return (theta * np.power(presvals/p0, cr['ROCP']))
+    return (theta * np.power(presvals/p0, cr['kappa']))
 
 
 def drylift(p, t, td):
@@ -267,7 +267,7 @@ def wetbulb(p, t, td):
     p2, t2 = drylift(p, t - cr['ZEROCNK'], td - cr['ZEROCNK'])
     return wetlift(p2, t2, p) + cr['ZEROCNK']
 
-# Source: SHARPpy
+
 def thetae(p, t, q, p0=1000.):
     """
     Calculates the equlivalent potential temperature (K) for the given parcel
@@ -280,7 +280,7 @@ def thetae(p, t, q, p0=1000.):
     -------
     qulivalent potential temperature in K as numpy.array
     """
-    return (t + ((2.501*1000000)/1004)*q) * np.power((p0/p), cr['ROCP'])
+    return (t + ((cr['Lref'])/cr['cpd'])*q) * np.power((p0/p), cr['kappa'])
 
 # -----------------------------------------------------------------------------------------------------------------------------
 
