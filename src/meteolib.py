@@ -195,7 +195,7 @@ def potlvl(theta, temp, p0=1000.):
     p/p0 = (T/T0)^Cp/R
     p = p0 / (T/T0)^Cp/R
     '''
-    thalvl = p0 / (pow((theta / temp), (1./cr['kappa'])))
+    thalvl = p0 / (pow((theta / temp), (cr['cpd']/cr['Rd'])))
     return thalvl
 
 

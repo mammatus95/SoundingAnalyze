@@ -121,6 +121,11 @@ constants = {**basic_const, **math_const, **peters_const,
              'kappa': peters_const['Rd']/peters_const['cpd']
              }
 
+constants_peters = {**basic_const, **math_const, **peters_const, 
+                    'epsilon': peters_const['Rd']/peters_const['Rv'],
+                    'kappa': peters_const['Rd']/peters_const['cpd']
+                    }
+
 constants_bolton = {**basic_const, **math_const, **bolton_const, 
                     'epsilon': bolton_const['Rd']/bolton_const['Rv'],
                     'kappa': bolton_const['Rd']/bolton_const['cpd']
