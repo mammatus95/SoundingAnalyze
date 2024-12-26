@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 # project modul
 from src.meteolib import cr, temp_at_mixrat, thalvl, theta, thetas, uvwind, uv2spddir
+from src.meteo_constants import constants_peters  #, constants_bolton, constants_sharp
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
@@ -45,14 +46,14 @@ class TestThetaFunction(unittest.TestCase):
     def test_valid_inputs_default_p0(self):
         pres = np.array([1000, 900, 800])
         temp = np.array([300, 310, 320])
-        expected_result = np.array([300, 319.47381, 341.066097])
+        expected_result = np.array([300, 319.463675, 341.043181])
         result = theta(pres, temp)
         np.testing.assert_allclose(result, expected_result, atol=0.01)
 
     def test_multiple_input_values(self):
         pres = np.array([1000, 900, 800, 700, 600])
         temp = np.array([300, 310, 320, 330, 340])
-        expected_result = np.array([300, 319.47, 341.07, 365.40, 393.43])
+        expected_result = np.array([300, 319.46, 341.04, 365.36, 393.37])
         result = theta(pres, temp)
         np.testing.assert_allclose(result, expected_result, atol=0.01)
 
@@ -69,7 +70,7 @@ class TestThetasFunction(unittest.TestCase):
         theta = 300
         presvals = 1000
         p0 = 500
-        expected_result = theta * np.power(presvals/p0, cr['ROCP'])
+        expected_result = theta * np.power(presvals/p0, constants_peters['kappa'])
         self.assertAlmostEqual(thetas(theta, presvals, p0), expected_result)
 
 

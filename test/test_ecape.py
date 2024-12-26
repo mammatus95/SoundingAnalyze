@@ -4,7 +4,7 @@ import numpy as np
 # project modul
 from src.ecape_lib import omega, domega, get_qs, compute_moist_static_energy, compute_rsat, moislif
 from src.ecape_lib import compute_LCL, compute_LCL_NUMERICAL
-from src.meteolib import cr
+from src.meteo_constants import constants  # constants_peters , constants_bolton, constants_sharp
 
 
 # ----------------------------------------------------------------------------------------------------------------------------
@@ -123,7 +123,7 @@ class TestGetQsFunction(unittest.TestCase):
 class TestComputeMoistStaticEnergy(unittest.TestCase):
     def setUp(self):
         global cr
-        cr = {'cpl': 4218.0, 'xlv': 2501000, 'G': 9.80665}  # example values for cr
+        cr = constants
         self.cr = cr
 
 
@@ -141,7 +141,8 @@ class TestComputeRsat(unittest.TestCase):
     def setUp(self):
         global cr
         # cpl 4190.0 4218.0 4186.0 J/kg/K   liquid water specific heat capacity
-        cr  = {'Rd': 287.05, 'Rv': 461.51, 'cpv': 1875.0, 'cpl': 4186.0, 'cpi': 1840.0, 'xlv': 2.5e6, 'xls': 2.834e6, 'ttrip': 273.16, 'eref': 611.73, 'G': 9.81}
+        #cr  = {'Rd': 287.05, 'Rv': 461.51, 'cpv': 1875.0, 'cpl': 4186.0, 'cpi': 1840.0, 'xlv': 2.5e6, 'xls': 2.834e6, 'ttrip': 273.16, 'eref': 611.73, 'G': 9.81}
+        cr = constants
         self.cr = cr
         self.T1 = 273.15
         self.T2 = 253.15
@@ -150,7 +151,7 @@ class TestComputeRsat(unittest.TestCase):
         T = 300.0
         p = 100000.0
         iceflag = 0
-        expected_result = 0.022780664040943
+        expected_result = 0.02277568272238176
         qsat = compute_rsat(T, p, self.T1, self.T2, iceflag)
         self.assertGreater(qsat, 0.0)
         self.assertAlmostEqual(qsat, expected_result)
@@ -243,18 +244,18 @@ class TestComputeLCL(unittest.TestCase):
         qv = 0.01  # kg/kg
         p = 101325.0  # Pa
         Z_LCL, T_LCL, P_LCL = compute_LCL(T, qv, p)
-        self.assertAlmostEqual(Z_LCL, 103.35, places=2)
-        self.assertAlmostEqual(T_LCL, 287.15, places=2)
-        self.assertAlmostEqual(P_LCL, 100096.26, places=2)
+        self.assertAlmostEqual(Z_LCL, 102.30, places=2)
+        self.assertAlmostEqual(T_LCL, 287.16, places=2)
+        self.assertAlmostEqual(P_LCL, 100108.28, places=2)
 
     def test_dry_condition(self):
         T = 288.15  # K
         qv = 0.002  # kg/kg
         p = 101325  # Pa
         Z_LCL, T_LCL, P_LCL = compute_LCL(T, qv, p)
-        self.assertAlmostEqual(Z_LCL, 2871.59, places=2)
+        self.assertAlmostEqual(Z_LCL, 2869.93, places=2)
         self.assertAlmostEqual(T_LCL, 260.20, places=2)
-        self.assertAlmostEqual(P_LCL, 70854.48, places=2)
+        self.assertAlmostEqual(P_LCL, 70860.81, places=2)
 
 
 
