@@ -89,10 +89,13 @@ def calculate_density_potential_temperature(Th, r_v):
     return Th*(1 + r_v/cr['epsilon'])/(1 + r_v)
 
 
+
 def calculate_PII(Z, Th_rho, p_sfc=1000.0):
 
     Pii = np.zeros(Z.shape[0])
+    
     Pii[0] = (p_sfc/cr['p0'])**(cr['kappa'])
+
     intarg = -(cr['G']/cr['cpd'])/Th_rho
 
     for iz in np.arange(1,Z.shape[0],1):
@@ -111,6 +114,7 @@ def calculate_temperature(pres, Th):
 
 def calculate_temperature_density(Pii, Th, r_v):
     return Th*Pii*(1 + r_v/cr['epsilon'])/(1 + r_v)
+
 
 
 def calculate_density(pres, T_rho):

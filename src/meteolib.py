@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 import src.meteo_constants as meteo_constants
+
 # -----------------------------------------------------------------------------------------------------------------------------
 # Source for the most functions are sharppy
 
@@ -195,7 +196,9 @@ def potlvl(theta, temp, p0=1000.):
     p/p0 = (T/T0)^Cp/R
     p = p0 / (T/T0)^Cp/R
     '''
+
     thalvl = p0 / (pow((theta / temp), (cr['cpd']/cr['Rd'])))
+
     return thalvl
 
 
@@ -212,6 +215,7 @@ def thetas(theta, presvals, p0=1000.):
     T = T0 * (p/p0)^R/Cp    
     '''
     return (theta * np.power(presvals/p0, cr['kappa']))
+
 
 
 def drylift(p, t, td):
