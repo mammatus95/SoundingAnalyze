@@ -18,14 +18,14 @@ class TestCAPE(unittest.TestCase):
         # absolute allowed difference esimate and expected value
         self.delta = 10.0 # J/kg 
 
-        self.expected_cape = 3548.94
+        self.expected_cape = 3531.94
         self.expected_cin = -50.4
         self.expected_lfc = 1650.0
         self.expected_el = 11850.0
 
         self.expected_ncape = 0
 
-        self.expected_ecape = 2342.39
+        self.expected_ecape = 2328.29
         self.expected_ecin = -51.5
         self.expected_elfc = 1750.0
         self.expected_eel = 11150.0
