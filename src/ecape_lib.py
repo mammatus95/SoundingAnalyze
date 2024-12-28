@@ -622,8 +622,6 @@ def compute_CAPE_AND_CIN(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
 # ----------------------------------------------------------------------------------------------------------------------------
 # compute NCAPE
 def compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL):
-    
-    
     """
     Compute NCAPE (Normalized CAPE) and other associated values.
 
@@ -694,9 +692,9 @@ def compute_NCAPE(T0, p0, q0, z0, T1, T2, LFC, EL):
 
 
 def compute_VSR(z0, u0, v0):
-    #compute 0-1 km storm-relative flow (V_SR) using the storm motion
-    #estimate of Bunkers et al. (2000)
-    #https://doi.org/10.1175/1520-0434(2000)015<0061:PSMUAN>2.0.CO;2
+    # compute 0-1 km storm-relative flow (V_SR) using the storm motion
+    # estimate of Bunkers et al. (2000)
+    # https://doi.org/10.1175/1520-0434(2000)015<0061:PSMUAN>2.0.CO;2
     
     f6000 = np.where(z0<=6000)[0]
     meanx=np.mean(u0[f6000])
@@ -744,10 +742,11 @@ def compute_VSR(z0, u0, v0):
     V_SR = np.nanmean(np.sqrt(u_sr[f1000]**2 + v_sr[f1000]**2))
     return V_SR, C_x, C_y
 
+
 def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
-    #compute 0-1 km storm-relative flow (V_SR) using the storm motion
-    #estimate of Bunkers et al. (2000)
-    #https://doi.org/10.1175/1520-0434(2000)015<0061:PSMUAN>2.0.CO;2
+    # compute 0-1 km storm-relative flow (V_SR) using the storm motion
+    # estimate of Bunkers et al. (2000)
+    # https://doi.org/10.1175/1520-0434(2000)015<0061:PSMUAN>2.0.CO;2
     
     zdiff = (z0 - EL)**2
     ind_top = np.where(zdiff==np.min(zdiff))[0][0]
@@ -811,7 +810,7 @@ def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L):
 
     if np.isnan(CAPE) or np.isnan(NCAPE) or np.isnan(V_SR) or np.isnan(EL) or np.isnan(L):
         return np.nan, np.nan, np.nan
-    #THESE ARE A BUNCH OF CONSTANT PARAMTERS SET FOR THE ECAPE CALCULATION
+    # these are a bunch of constant paramters set for the ecape calculation
     H=EL
     sigma = 1.1
     alpha=0.8
@@ -819,7 +818,7 @@ def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L):
     vsr_tilde = V_SR/np.sqrt(2*CAPE)
     N_tilde = NCAPE/CAPE
     
-    #EQUATION SOLVES FOR THE NONDIMENSIONAL ECAPE (E_TILDE_A IN THE PAPER)
+    # equation solves for the nondimensional ecape (e_tilde_a in the paper)
     E_tilde = vsr_tilde**2 + ( -1 - pitchfork - (pitchfork/(vsr_tilde**2 ))*N_tilde + \
                               np.sqrt((1 + pitchfork + (pitchfork/(vsr_tilde**2 ))*N_tilde)**2 + \
                                       (4*(pitchfork/(vsr_tilde**2 ))*(1 - pitchfork*N_tilde) ) ) )/( 2*pitchfork/(vsr_tilde**2) )
@@ -838,250 +837,11 @@ def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L):
     #Radius=Radius/2
     
     # Fractional Entrainment Rate
-    #varepsilon = 0.65*eps*(alpha**2)*(np.pi**2)*E_tilde/(4*(sigma**2)*EL*(vsr_tilde**2 ) )
+    # varepsilon = 0.65*eps*(alpha**2)*(np.pi**2)*E_tilde/(4*(sigma**2)*EL*(vsr_tilde**2 ) )
 
     # Radius
     Radius = np.sqrt(2*cr['ksq']*L/(cr['Pr']*varepsilon))
 
     return E_tilde, varepsilon, Radius
 
-# ----------------------------------------------------------------------------------------------------------------------------
 
-
-def CI_model(T0, p0, q0, z0, u0, v0, T1, T2, radrng, itmax, L, prate_global):
-    
-    #THIS FUNCTION EXECUTES THE "PROGRESSIVE ROOTING" TOY MODEL DESCRIBED BY PETERS ET AL. 2022A
-    #https://journals.ametsoc.org/view/journals/atsc/79/6/JAS-D-21-0145.1.xml
-    
-    #NOTE, A VAREITY OF THINGS HAVE CHANGED SINCE THAT PUBLICATION.  I WILL TRY TO 
-    #POINT SPECIFIC EQUATIONS HERE TO EQUATION NUMBERS IN THE PUBLCIATION.  I WILL PROBABLY
-    #CREATE A TECHNICAL DOCUMENT TO DESCRIBE THESE CHANGES SOMETIME SOON.  STAY TUNED...
-    
-    #THE FUNCTION TAKES AS INPUT:
-        #T0, profile of temperature (K)
-        #p0, profile of pressure (Pa)
-        #q0, profile of specific humidity (kg/kg)
-        #z0, profile of height above ground level (m)
-        #u0, profile of u wind (m/s)
-        #v0, profile of v wind (m/s)
-        #T1, temperature at which freezing begins in parcel calculations (I usually set to 273.15 K)
-        #T2, temperature at which freezing ends in the parcel calculation (K).  This will control the temperature
-            #range over which mixed-phase occurs.  I usually set to 253.15 k
-        #radrng, a vector containing the initial radii we are going to test.  A reasonable
-            #choice here is a range from 100 m to 6000 m at intecr['Rv']als of 100 m (np.arange(100, 6000, 100))
-        #itmax, the number of iterations (I usually set to 20)
-        #L, the mixing length (I usually set to 250 m)
-        #prate_global, the precipitation loss inverse length scale (km^(-1)).  Larger values make the
-            #parcel more pseudoadiabatic, smaller values make it more adiabatic.
-    
-
-    
-
-    # Paramters unique to the ci model
-    alpha = 0.8    # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
-    start_loc = 0  # STARTING HEIGHT OF THE AIR PARCEL WE ARE LIFTING
-    sig = 0.5      # RATIO OF THE HEIGHT OF WMAX TO EQUILBIRIUM LEVEL HEIGHT (SHOULD PROBABLY SET THIS TO 1)
-    rfac = 1/4     # RELAXATION FACTOR FOR MODEL INTEGRATION.  SMALLER VALUE GIVES A SMOOTHER SOLUTION
-    
-    #WE WILL NEED THE DENSITY PROFILE TO COMPUTE THE STORM-RELATIVE WIND LATER
-    rho0 = p0/(cr['Rd']*T0*(1 + (cr['Rv']/cr['Rd'] - 1)*q0))
-
-    #TIME SERIES OF QUANTITIES OUTPUTTED FROM THE CI MODEL
-    R_TS = np.zeros((radrng.shape[0], itmax)) #RADIUS OF THE UPDRAFT
-    H_TS = np.zeros((radrng.shape[0], itmax)) #EL HEIGHT
-    W_TS = np.zeros((radrng.shape[0], itmax)) #MAX VERTICAL VELOCITY
-    VSR_TS = np.zeros((radrng.shape[0], itmax)) #STORM-RELATIVE FLOW
-    
-    #INITIAL CONDITION ON RADIUS: SET TO R0
-    R_TS[:, 0]=radrng 
-    
-    
-    #dudz=np.zeros(u0.shape)
-    #dvdz=np.zeros(v0.shape)
-    #dudz[1:dudz.shape[0]-1]= ( u0[2:dudz.shape[0]]-u0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
-    #dudz[0]=2*dudz[1]-dudz[2]
-    #dvdz[1:dudz.shape[0]-1]= ( v0[2:dudz.shape[0]]-v0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
-    #dvdz[0]=2*dvdz[1]-dvdz[2]
-    #SHR_mag = np.sqrt(dudz**2 + dvdz**2)
-    
-    #IN THE FUTRE, WE'LL PROBABLY WANT TO COMPUTE THE DENSITY WEIGHTED STORM-RELATIVE FLOW, LIKE IN THE ECAPE THEORY
-    #UDCAPE, UDCIN, UDLFC, UDEL=compute_CAPE_AND_CIN(T0, p0, q0, start_loc, 0, prate_global, z0, T1, T2)
-
-    #PARAMETERS FOR CI MODEL
-    for it in np.arange(0, itmax-1, 1): #LOOP THROUGH THE SPECIFIED NUMBER OF ITERATIONS
-        for ir in np.arange(0, radrng.shape[0], 1): #LOOP THROUGH EACH OF THE STARTING RADII
-            R_on = R_TS[ir, it] #STORE THE RADIUS (IN M)
-            #
-            fracent = 2*cr['ksq']*L/(cr['Pr']*(R_on**2)) #USE RADIUS TO COMPUTE FRACTION ENTRAINMENT RATE WITH EQ. XX IN XX
-            
-            #WHEN COMPUTING THE VERTICAL PROFILE OF KINETIC ENERGY, THE LOWER BOUNDARY CONDITION IS THAT A PARCEL
-            #BEGINS WITH THE KINETIC ENERGY OF THE INFLOW.  THIS MEANS WE HAVE TO GIVE THE VERTICAl VELOCITY
-            #FUNCTION THE STORM RELATIVE WIND.
-            if it == 0:
-                #AT THE FIRST TIME STEP, WE WONT HAVE THE STORM RELATIVE WIND YET SO WE'LL MAKE AN AD-HOC ESTIMATE
-                #V_SR = 15*R_on/5000 #5.0  
-                V_SR = 20*R_on/5000 #5.0  
-            else:
-                #AT LATER TIMES, WE JUST USE THE STORM RELATIVE FLOW FROM THE PREVIOUS TIME STEP
-                V_SR = VSR_TS[ir, it-1]
-                    
-            #GET THE MAXIMUM VERTICAL VELOCITY PROFILE FOR A RISING CLOUD THERMAL
-            CAPE, LFC, EL, B_pos=compute_w(T0, p0, q0, start_loc, fracent, prate_global, z0, T1, T2, R_on, u0, v0, V_SR)
-            #NOW THE VERTICAL VELOCITY AT THE BASE OF THE THERMAL, WHICH WILL EXPERIENCE A HIGHER ENTRAINMENT RATE
-            CAPE2, LFC2, EL2, null=compute_w(T0, p0, q0, start_loc, fracent*9/4, prate_global, z0, T1, T2, R_on, u0, v0, V_SR)
-            
-            #WE WILL NEED THE PROFILE OF POSITIVE BUOYANCY TO ESTIMATE STORM MOTION LATER.  
-            #ZERO OUT THE NEGATIVE BUOYANCY
-            B_pos = np.maximum(B_pos, 0)
-
-            #IF WE ACTUALLY HAVE ANY POSITIVE BUOYANCY, WE'LL ADVANCE THE MODEL
-            if ~np.isnan(EL):
-                
-                #GET THE 0-1 KM STORM-RELATIVE FLOW
-                V_SR = compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos)
-                #V_SR = compute_VSR(z0, u0, v0)
-                     
-                #ADVANCE TO THE NEXT RADIUS USING EQ XX IN XX
-                R_next = 1.7*( (EL2/EL)**2 )*2*V_SR*(EL-LFC)*sig/(np.pi*alpha*np.sqrt(2*CAPE))
-                R_next = (rfac)*R_next + (1-rfac)*R_on # RELAXATION PROCEEDURE
-                
-            else: # OTHERWISE SET THE RADIUS AT THE NEXT TIME TO ZERO
-                R_next = 0
-                
-            if EL<LFC: # THIS HAPPENS SOMETIMES. SET TO ZERO IF EL IS LESS THAN LFC
-                R_next = 0
-                
-            #STORE TIME SERIES'
-            R_TS[ir, it+1] = R_next
-            H_TS[ir, it]=EL
-            W_TS[ir, it]=np.sqrt(2*CAPE)
-            VSR_TS[ir, it]=V_SR
-        R_TS[np.where(np.isnan(R_TS))]=0
-    
-    return R_TS, H_TS, W_TS, VSR_TS
-
-# ----------------------------------------------------------------------------------------------------------------------------
-
-def compute_w(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2, Radius, u0, v0, V_SR):
-    #[CAPE, CIN, LFC, EL]
-
-    #this function computes CAPE and CIN
-    
-    #input arguments
-    #T0: sounding profile of temperature (in K)
-    #p0: sounding profile of pressure (in Pa)
-    #q0: sounding profile of water vapor mass fraction (specific humidity), in kg/kg
-    #start_loc: index of the parcel starting location (set to 1 for the
-    #lowest: level in the sounding)
-    #fracent: fractional entrainment rate (in m^-1)
- 
-    # this function computes CAPE and CIN
-
-    # contants
-    c_d = 0.2  # drag coeficient on a sphere
-    Lambda = 0.6  # RATIO OF ASCENT RATE OF THERMAL TO ITS MAX W
-    alpha = 0.8  # ASSUMED RATIO OF HORIZONTALLY AVERAGED W TO HORIZONTAL MAX OF W AT A GIVEN LEVEL
-
-    # COMPUTE A VERTICAL PROFILE OF THE MAGNITUDE OF VERTICAL WIND SHEAR
-    dz = np.zeros(u0.shape)
-    dz[0 : u0.shape[0] - 1] = z0[1 : u0.shape[0]] - z0[0 : u0.shape[0] - 1]
-    dudz = np.zeros(u0.shape)
-    dvdz = np.zeros(u0.shape)
-    dudz[0 : dudz.shape[0] - 1] = (u0[1 : dudz.shape[0]] - u0[0 : dudz.shape[0] - 1]) / dz[0 : dudz.shape[0] - 1]
-    dvdz[0 : dudz.shape[0] - 1] = (v0[1 : dudz.shape[0]] - v0[0 : dudz.shape[0] - 1]) / dz[0 : dudz.shape[0] - 1]
-    S = np.sqrt(dudz**2 + dvdz**2)
-
-    # Compute the lifted parcel buoyancy
-    _, Qv_lif, Qt_lif, B_lif = lift_parcel_adiabatic(
-        T0, p0, q0, start_loc, fracent, prate, z0, T1, T2
-    )
-
-    # CALCULATE THE LIFTED CONDENSATION LEVEL
-    qdiff = abs(Qt_lif - Qv_lif)  # FIGURE OUT THE FIRST HEIGHT WHERE QV STARTS DEVIATING FROM QT, IMPLYING CONDENSATION
-    if np.logical_and(~np.isnan(qdiff[1]), np.nanmax(qdiff) > 0):
-        lcl_ind = np.where(qdiff > 0)[0][0]
-        LCL = z0[lcl_ind]
-    else:
-        LCL = 1000
-        lcl_ind = np.where(abs(LCL - z0) == np.amin(abs(LCL - z0)))[0][0]
-
-    # IF WE HAVE SOME POSITIVE BUOYANCY, PROCEED
-    if np.nanmax(B_lif) > 0:
-        # MAKE A NEW MATRIX THAT WILL ONLY CONTAIN THE POSITIVE PART OF BUOYANCY
-        B_pos = np.zeros(B_lif.shape)
-        B_pos[:] = B_lif[:]
-
-        # GET RID OF ALL NEGATIVE BUOYANCY BELOW THE LCL
-        B_pos[0 : lcl_ind] = 0
-        wpos = np.where(B_pos > 0)[0]
-        if len(wpos) > 0:
-            wpos = wpos[0]  # WPOS CONTAINS INDEX OF LCL.  SET TO 0 IF THERE IS NO POSTIVE BUOYANCY
-        else:
-            wpos = lcl_ind
-        B_pos[0 : wpos] = 0
-        dz = z0[1 : z0.shape[0]] - z0[0 : z0.shape[0] - 1]
-
-        # LFC WILL BE THE LAST INSTANCE OF NEGATIVE BUOYANCY BEFORE THE PARCEL REACHES ITS CONTINUOUS INTERVAL OF POSITIVE BUOY
-        mx = np.nanmax(B_lif)
-        imx = np.where(B_lif == mx)
-        imx = imx[0][0]
-
-        fneg = np.where(B_lif < 0)
-        fneg = fneg[0]
-        inn = np.where(fneg < imx)
-
-        inn = inn[0]
-        fneg = fneg[inn]
-        if len(inn) > 0:
-            LFC = 0.5 * z0[np.max(fneg)] + 0.5 * z0[np.max(fneg) + 1]
-        else:
-            LFC = z0[start_loc]
-
-        # EL WILL BE THE LAST INSTANCE OF POSITIVE BUOYANCY
-        fpos = np.where(B_lif > 0)
-        fpos = fpos[0]
-        EL = 0.5 * z0[np.max(fpos)] + 0.5 * z0[np.max(fpos) + 1]
-
-        # INITIALIZE PROFILE OF SQUARED VERTICAL VELOCITY (I.E., VERTICAL KINETIC ENERGY)
-        WSQ_prof = np.zeros(B_pos.shape[0])
-        WSQ_prof[start_loc] = (V_SR**2) / 2  # LOWER BOUNADRY CONDITION ON VERTICAL KE IS THE KE OF INFLOW
-        uprime_prof = np.zeros(B_pos.shape[0])  # INITIALIZE UPRIME PROFILE
-        for iz in np.arange(0, WSQ_prof.shape[0] - 1, 1):  # VERTICALLY INTEGRATE
-            B_on = B_pos[iz]  # STORE THE CURRENT BUOYANCY
-            ebuoy_fac = 1 / (1 + 2 * (alpha**2) * (Radius**2) / ((EL - LFC)**2))  # SCALE FACTOR THAT ACCOUNTS FOR EFFECITVE BUOYANCY
-            # ns_drag = -2.5*c_d*(3/8)/Radius #COEFICIENT ON THE NON-SHEARED PART OF DRAG
-            ns_drag = -c_d * (3 / 8) / Radius  # COEFICIENT ON THE NON-SHEARED PART OF DRAG
-            s_drag = -(c_d / Radius) * (1 - Lambda) / (Lambda**2)  # COEFICIENT ON THE SHEARED PART OF DRAG
-            sh_drag = (  1 / (0.5 * np.sqrt(2 * WSQ_prof[iz - 1])) ) * (
-                3 * c_d / (8 * Radius))  # SHEARED DRAG TERM
-
-            if np.sqrt(2 * WSQ_prof[iz - 1]) < 1:  # IF WE HAVE VERY SMALL VERTICAL VELOICTY (LESS THAN 1 M/S, WE NEED TO ZERO OUT THE SHEAR DRAG TERM OR THINGS BLOW UP)
-                sh_drag = 0
-
-            # NOW VERTICALLY INTEGRATE THE UPRIME AND WSQ EQUATIONS TOGETHER, FOLLOWING EQ. XX AND XX IN XX RESPECTIVELY
-            uprime_prof[iz + 1] = uprime_prof[iz - 1] + (z0[iz + 1] - z0[iz]) * (
-                -sh_drag * uprime_prof[iz]**2 + S[iz]
-            )
-            WSQ_prof[iz + 1] = WSQ_prof[iz] + (z0[iz + 1] - z0[iz]) * (
-                ebuoy_fac * B_on + ns_drag * WSQ_prof[iz] + s_drag * uprime_prof[iz] * np.sqrt(2 * WSQ_prof[iz]))
-        
-        # WE WILL OUTPUT THE MAXIMUM KE AS THE "CAPE" ARGUMENT                                                                                                          
-        CAPE = np.nanmax(WSQ_prof)
-        
-        # SET THE EL TO THE HEIGHT OF MAXIMUM VERTICAL VELOCITY
-        mxval = np.nanmax(WSQ_prof)
-        fnval = np.where(WSQ_prof == mxval)
-        LFC = LCL
-        if fnval[0].shape[0] > 0:
-            EL = z0[fnval[0][0]]
-        else:
-            EL = np.nan
-    else:
-        #IF WE HAVE NO POSITIVE BUOYANCY, SET EVERYTHING TO 0S AND NANS
-        CAPE = 0      
-        LFC = np.nan
-        EL = np.nan
-        B_pos = np.zeros(T0.shape)
-        
-
-    return CAPE, LFC, EL, B_pos
