@@ -152,28 +152,28 @@ def compute_rsat(T, p, T1, T2, iceflag=0):
     """
     
     epsilon = cr['Rd']/cr['Rv']
+    term1_water = (cr['cpv']-cr['cpl'])/cr['Rv']
+    term1_ice = (cr['cpv']-cr['cpi'])/cr['Rv']
+
+    term2_water = (cr['xlv']-cr['ttrip']*(cr['cpv']-cr['cpl']))/cr['Rv']
+    term2_ice = (cr['xls']-cr['ttrip']*(cr['cpv']-cr['cpi']))/cr['Rv']
 
     if iceflag == 0:
-        term1 = (cr['cpv']-cr['cpl'])/cr['Rv']
-        term2 = (cr['xlv']-cr['ttrip']*(cr['cpv']-cr['cpl']))/cr['Rv']
-        esl_l = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
+
+        esl_l = np.exp((T-cr['ttrip'])*term2_water/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1_water
         return epsilon*esl_l/(p-esl_l)
     elif iceflag == 1: # give linear combination of mixing ratio with respect to liquid and ice (eq. 20 in Peters et al. 2022)
         omeg = omega(T, T1, T2)
 
-        term1 = (cr['cpv']-cr['cpl'])/cr['Rv']
-        term2 = (cr['xlv']-cr['ttrip']*(cr['cpv']-cr['cpl']))/cr['Rv']
-        esl_l = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
+        esl_l = np.exp((T-cr['ttrip'])*term2_water/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1_water
         qsat_l = epsilon*esl_l/(p-esl_l)
-        term1 = (cr['cpv']-cr['cpi'])/cr['Rv']
-        term2 = (cr['xls']-cr['ttrip']*(cr['cpv']-cr['cpi']))/cr['Rv']
-        esl_i = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
+
+        esl_i = np.exp((T-cr['ttrip'])*term2_ice/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1_ice
         qsat_i = epsilon*esl_i/(p-esl_i)
         return (1-omeg)*qsat_l + (omeg)*qsat_i
     elif iceflag == 2: # only give mixing ratio with respect to ice
-        term1 = (cr['cpv']-cr['cpi'])/cr['Rv']
-        term2 = (cr['xls']-cr['ttrip']*(cr['cpv']-cr['cpi']))/cr['Rv']
-        esl_i = np.exp((T-cr['ttrip'])*term2/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1
+
+        esl_i = np.exp((T-cr['ttrip'])*term2_ice/(T*cr['ttrip']))*cr['eref']*(T/cr['ttrip'])**term1_ice
         esl_i = min(esl_i, p*0.5)
         return epsilon*esl_i/(p-esl_i)
     else:
@@ -450,18 +450,18 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
     iz = start_loc
 
     #
-    #for iz in np.arange(start_loc+1, z0.shape[0]):
+    # for iz in np.arange(start_loc+1, z0.shape[0]):
     #
     #
-    # I REVISED THIS A BIT.  TO MAKE THE CODE FASTER, I HAVE THE CALCULATION CUT OUT WHEN THE INTEGRATED NEGATIVE BUOYANCY ("BRUN") 
-    # BECOMES MORE NEGATIVE THAN THE TOTAL INTEGRATED POSITIVE BUOYANCY.  I RESTRICT THIS TO ONLY HAPPEN AFTER WE HAVE PASSED 
-    # THE HEIGHT OF MINIMUM MSE.  UNCOMMENT THE FOR LOOP ABOVE AND COMMENT OUT THE WHILE LOOP IF YOU JUST WANT TO INTEGRATE TO THE TOP OF THE SOUNDING.
+    # MAKE THE CODE FASTER, I HAVE THE CALCULATION CUT OUT WHEN THE INTEGRATED NEGATIVE BUOYANCY ("BRUN") 
+    # BECOMES MORE NEGATIVE THAN THE TOTAL INTEGRATED POSITIVE BUOYANCY. I RESTRICT THIS TO ONLY HAPPEN AFTER WE HAVE PASSED 
+    # THE HEIGHT OF MINIMUM MSE. UNCOMMENT THE FOR LOOP ABOVE AND COMMENT OUT THE WHILE LOOP IF YOU JUST WANT TO INTEGRATE TO THE TOP OF THE SOUNDING.
     # THE +25 PART IN THE WHILE STATEMENT IS A PAD ON B_RUN (THE NEGATIVE CAPE HAS TO BE 25 J/KG LESS THAN THE POSITIVE CAPE TO KILL THE LOOP)
     # while iz<(z0.shape[0])-1 and (z0[iz]<z0[mn_hgt] or (B_run+25)>0):
     # while iz<(z0.shape[0])-1:
     while iz < (z0.shape[0])-1 and (z0[iz] < z0[mn_hgt] or (B_run+250) > 0):
         iz = iz + 1
-        q_sat=(1-Qt_lif[iz-1])*compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 1)
+        q_sat=(1-Qt_lif[iz-1]) * compute_rsat(T_lif[iz-1], p0[iz-1], T1, T2, 1)
         if Qv_lif[iz-1]<q_sat: # if we are unsaturated, go up at the unsaturated adiabatic lapse rate (eq. 19 in Peters et al. 2022)
             
         
@@ -488,12 +488,12 @@ def lift_parcel_adiabatic(T0, p0, q0, start_loc, fracent, prate, z0, T1, T2):
 
                 T_lif[iz] = T_halfstep + dz_wet \
                             * moislif(T_halfstep, Qv_halfstep, (1-Qt_halfstep) \
-                            *compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep) \
-                            *compute_rsat(T_halfstep, p_halfstep, T1, T2, 2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
+                            * compute_rsat(T_halfstep, p_halfstep, T1, T2, 0), (1-Qt_halfstep) \
+                            * compute_rsat(T_halfstep, p_halfstep, T1, T2, 2), p_halfstep, T0_halfstep, Q0_halfstep, Qt_halfstep, fracent, prate, T1, T2)
                 
                 
                 Qt_lif[iz] = Qt_lif[iz-1] - (z0[iz] - z0[iz-1]) * fracent * (Qt_halfstep - Q0_halfstep)
-                Qv_lif[iz] = (1-Qt_lif[iz])*compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
+                Qv_lif[iz] = (1-Qt_lif[iz]) * compute_rsat(T_lif[iz], p0[iz], T1, T2, 1)
 
                 if Qt_lif[iz] < Qv_lif[iz]:
                     Qv_lif[iz] = Qt_lif[iz]
@@ -697,23 +697,23 @@ def compute_VSR(z0, u0, v0):
     # https://doi.org/10.1175/1520-0434(2000)015<0061:PSMUAN>2.0.CO;2
     
     f6000 = np.where(z0<=6000)[0]
-    meanx=np.mean(u0[f6000])
-    meany=np.mean(v0[f6000])
+    meanx = np.mean(u0[f6000])
+    meany = np.mean(v0[f6000])
     
     f0500 = np.where(z0<=500)[0]
-    lowx=np.mean(u0[f0500])
-    lowy=np.mean(v0[f0500])
+    lowx = np.mean(u0[f0500])
+    lowy = np.mean(v0[f0500])
     
     f560 = np.where(np.logical_and(z0<=6000, z0>=5500))[0]
-    highx=np.mean(u0[f560])
-    highy=np.mean(v0[f560])
-    BK_SHRx=highx-lowx
-    BK_SHRy=highy-lowy
-    BK_mag=np.sqrt(BK_SHRx**2 + BK_SHRy**2)
-    BK_dirx=BK_SHRx/BK_mag
-    BK_diry=BK_SHRy/BK_mag
-    BK_orthx=BK_diry*7.5
-    BK_orthy=-BK_dirx*7.5
+    highx = np.mean(u0[f560])
+    highy = np.mean(v0[f560])
+    BK_SHRx = highx-lowx
+    BK_SHRy = highy-lowy
+    BK_mag = np.sqrt(BK_SHRx**2 + BK_SHRy**2)
+    BK_dirx = BK_SHRx/BK_mag
+    BK_diry = BK_SHRy/BK_mag
+    BK_orthx = BK_diry*7.5
+    BK_orthy =- BK_dirx*7.5
 
 
     SR_mean_u = u0 - meanx
@@ -732,8 +732,8 @@ def compute_VSR(z0, u0, v0):
     propfac = 1
 
 
-    C_x = meanx+propfac*BK_orthx
-    C_y = meany+propfac*BK_orthy
+    C_x = meanx + propfac*BK_orthx
+    C_y = meany + propfac*BK_orthy
     
     u_sr = u0 - C_x
     v_sr = v0 - C_y
@@ -763,38 +763,38 @@ def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
     #meany=np.mean(v0[f6000])
     
     f0500 = np.where(z0<=500)[0]
-    lowx=np.mean(u0[f0500])
-    lowy=np.mean(v0[f0500])
+    lowx = np.mean(u0[f0500])
+    lowy = np.mean(v0[f0500])
     
     f560 = np.where(np.logical_and(z0<=6000, z0>=5500))[0]
-    highx=np.mean(u0[f560])
-    highy=np.mean(v0[f560])
-    BK_SHRx=highx-lowx
-    BK_SHRy=highy-lowy
-    BK_mag=np.sqrt(BK_SHRx**2 + BK_SHRy**2)
-    BK_dirx=BK_SHRx/BK_mag
-    BK_diry=BK_SHRy/BK_mag
-    BK_orthx=BK_diry*7.5
-    BK_orthy=-BK_dirx*7.5
+    highx = np.mean(u0[f560])
+    highy = np.mean(v0[f560])
+    BK_SHRx = highx-lowx
+    BK_SHRy = highy-lowy
+    BK_mag = np.sqrt(BK_SHRx**2 + BK_SHRy**2)
+    BK_dirx = BK_SHRx/BK_mag
+    BK_diry = BK_SHRy/BK_mag
+    BK_orthx = BK_diry*7.5
+    BK_orthy =- BK_dirx*7.5
 
 
-    SR_mean_u= u0 - meanx
-    SR_mean_v= v0 - meany
-    dudz=np.zeros(u0.shape)
-    dvdz=np.zeros(v0.shape)
-    dudz[1:dudz.shape[0]-1]= ( u0[2:dudz.shape[0]]-u0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
-    dudz[0]=2*dudz[1]-dudz[2]
-    dvdz[1:dudz.shape[0]-1]= ( v0[2:dudz.shape[0]]-v0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
-    dvdz[0]=2*dvdz[1]-dvdz[2]
+    SR_mean_u = u0 - meanx
+    SR_mean_v = v0 - meany
+    dudz = np.zeros(u0.shape)
+    dvdz = np.zeros(v0.shape)
+    dudz[1:dudz.shape[0]-1] = ( u0[2:dudz.shape[0]]-u0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
+    dudz[0] = 2*dudz[1] - dudz[2]
+    dvdz[1:dudz.shape[0]-1] = ( v0[2:dudz.shape[0]]-v0[0:dudz.shape[0]-2] )/( z0[2:dudz.shape[0]]-z0[0:dudz.shape[0]-2] )
+    dvdz[0] = 2*dvdz[1]-dvdz[2]
     f1000 = np.where(z0<=1000)[0]
     SRH_mean = abs(np.mean(-SR_mean_u[f1000]*dvdz[f1000] + SR_mean_v[f1000]*dudz[f1000])*1000.0)
     
     
-    propfac=min(SRH_mean/150, 1)
+    propfac = min(SRH_mean/150, 1)
 
 
-    C_x=meanx+propfac*BK_orthx
-    C_y=meany+propfac*BK_orthy
+    C_x = meanx+propfac*BK_orthx
+    C_y = meany+propfac*BK_orthy
     
     u_sr = u0 - C_x
     v_sr = v0 - C_y
@@ -806,15 +806,44 @@ def compute_VSR_DIFF(z0, u0, v0, rho0, EL, B_pos):
 
 # ----------------------------------------------------------------------------------------------------------------------------
 
-def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L):
+def compute_ETILDE(CAPE, NCAPE, V_SR, EL, L, sigma=1.1, alpha=0.8):
+
+    """
+    Compute the nondimensional ecape (e_tilde_a), nondimensional variance of 
+    epsilon (varepsilon), and the radius of the escape (Radius) given 
+    Convective Available Potential Energy (CAPE), Normalized CAPE (NCAPE), 
+    Storm Relative Flow (V_SR), the height of the Equilibrium Level (EL), 
+    and the characteristic length scale (L).
+
+    Parameters
+    ----------
+    CAPE : float
+        Convective Available Potential Energy in J/kg
+    NCAPE : float
+        Normalized CAPE
+    V_SR : float
+        Storm Relative Flow in m/s
+    EL : float
+        Height of the Equilibrium Level in m
+    L : float
+        Characteristic length scale in m
+
+    Returns
+    -------
+    e_tilde_a : float
+        Nondimensional ecape
+    varepsilon : float
+        Nondimensional variance of epsilon
+    Radius : float
+        Radius of the escape in m
+    """
 
     if np.isnan(CAPE) or np.isnan(NCAPE) or np.isnan(V_SR) or np.isnan(EL) or np.isnan(L):
         return np.nan, np.nan, np.nan
     # these are a bunch of constant paramters set for the ecape calculation
-    H=EL
-    sigma = 1.1
-    alpha=0.8
-    pitchfork = cr['ksq']*(alpha**2)*(np.pi**2)*L/(4*cr['Pr']*(sigma**2)*H)
+
+    
+    pitchfork = cr['ksq']*(alpha**2)*(np.pi**2)*L/(4*cr['Pr']*(sigma**2)*EL)
     vsr_tilde = V_SR/np.sqrt(2*CAPE)
     N_tilde = NCAPE/CAPE
     
